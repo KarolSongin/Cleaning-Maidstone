@@ -34,8 +34,8 @@ Only one process can use a PGlite database directory at a time. Stop the server 
 - Customer records, enquiry statuses, internal notes and follow-up tasks persist.
 - Admin day/week/month calendar and cleaner filter; create/assign bookings, weekly/fortnightly recurrence, drag or form rescheduling and cancellation of a single occurrence.
 - Database constraints reject overlaps, out-of-availability work and approved leave. Recurrence preserves Europe/London wall time through DST. Skipped/repeated local clock times are rejected explicitly.
-- Cleaner portal exposes assigned addresses/instructions only; started/completed actions and availability/leave requests persist. Admins approve or decline requests after conflicts are resolved.
-- Tiptap articles/landing pages, structured sections, image uploads, SEO fields, authors/categories/dates, drafts, authenticated preview, publishing and unpublishing. Public content is refreshed on publishing mutations; drafts return 404 for public requests. The `home` page adds editable editorial content below the homepage introduction.
+- Cleaner portal exposes assigned addresses/instructions only, with list and read-only day/week/month calendar views. Cleaners can open job details and mark their own work started/completed, but cannot create, move, resize, reassign or cancel visits. Availability/leave requests persist for admin review.
+- Tiptap articles/landing pages, structured sections, image uploads, SEO fields, authors/categories/dates, drafts, authenticated preview, publishing and unpublishing. Public content is refreshed on publishing mutations; drafts return 404 for public requests. The `home` page adds editable editorial content after the fixed homepage sections, before the enquiry form.
 - Lazy 3D room with ordinary HTML task controls, static/reduced-motion fallback and on-demand rendering.
 - Local sample call events, caller-match suggestion, manual association, admin notes, follow-ups and distinct unavailable/failed recording/transcript states. Repeated events do not duplicate conversations or transcript stages.
 
@@ -85,3 +85,4 @@ The source repository is [KarolSongin/Cleaning-Maidstone](https://github.com/Kar
 - [Site inventory and migration map](docs/site-inventory.md)
 - [Architecture](docs/architecture.md)
 - [Integration requirements and official references](docs/integrations.md)
+- [Public redesign and asset sources](docs/public-redesign.md)

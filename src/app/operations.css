@@ -306,6 +306,56 @@ td small {
   max-width: 700px;
   margin: auto;
 }
+.cleaner-container.calendar-active {
+  max-width: 1100px;
+}
+.rota-view-controls {
+  display: flex;
+  gap: 8px;
+  margin: 25px 0 18px;
+}
+.rota-view-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d4dfdc;
+  border-radius: 7px;
+  padding: 10px 14px;
+  background: white;
+  color: var(--navy);
+  font-size: 12px;
+}
+.rota-view-controls button[aria-pressed="true"] {
+  background: var(--navy);
+  color: white;
+  border-color: var(--navy);
+}
+.rota-readonly {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+.rota-readonly svg {
+  flex-shrink: 0;
+}
+.rota-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.rota-detail-heading h2 {
+  margin: 0;
+}
+.cleaner-calendar .fc-event {
+  cursor: pointer;
+}
+.cleaner-calendar .fc-toolbar {
+  flex-wrap: wrap;
+  gap: 12px;
+}
 .job-card {
   background: white;
   border: 1px solid #dfe5e2;

@@ -61,7 +61,7 @@ Keep that terminal running. On your own computer, open `http://127.0.0.1:3000` i
 - Submit an enquiry using made-up contact details. It persists locally and does not contact the business or confirm a booking.
 - Open `http://127.0.0.1:3000/login/` and click **Admin demo**. No password is needed for the demo button. Review enquiries/customers, calendar day/week/month views, assignments, availability/leave, content editor and conversations.
 - Try creating a customer and visit, moving an occurrence and publishing a draft article. Use the explicitly labelled sample-call action to populate synthetic conversation events; there are no real calls or playable sample audio.
-- Sign out, return to the login page and click **Cleaner demo**. Check the assigned rota, job details, started/completed actions and availability/leave requests.
+- Sign out, return to the login page and click **Cleaner demo**. Check both **List view** and **Calendar view**, switch between day/week/month and select a visit for its details. The calendar is read-only; admins manage the schedule. Started/completed actions and availability/leave requests still work.
 - Restart the app and confirm changes remain. Demo data lives under `.local/` on your computer.
 
 Use synthetic data. The server binds to your computer's loopback interface; keep demo access local.
@@ -94,7 +94,7 @@ $env:CHROMIUM_PATH = node -p "require('@playwright/test').chromium.executablePat
 npm run test:e2e
 ```
 
-The production build from step 5 is required. Browser tests start their own server on port 3001 and use a separate fresh database. On Linux, install Chromium system dependencies if Playwright reports missing libraries. The verified cloud results were 21 focused tests and 14 browser journeys; see [verification.md](verification.md).
+The production build from step 5 is required. Browser tests start their own server on port 3001 and use a separate fresh database. On Linux, install Chromium system dependencies if Playwright reports missing libraries. The verified cloud results were 21 focused tests and 20 browser journeys; see [verification.md](verification.md).
 
 ## Make changes later
 

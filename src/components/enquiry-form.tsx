@@ -172,8 +172,8 @@ export function EnquiryForm({ demo = false }: { demo?: boolean }) {
           ))}
         </div>
         <small>
-          Our current public hours are Monday to Friday. Other preferences can
-          be discussed.
+          Appointments are currently Monday to Friday. Tell us if your days are
+          flexible.
         </small>
       </fieldset>
       <label>

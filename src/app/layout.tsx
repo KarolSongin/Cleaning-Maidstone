@@ -5,7 +5,7 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL || "https://cleaningmaidstone.co.uk",
   ),
   title: {
-    default: "Cleaning Maidstone | A calmer home, every week",
+    default: "Cleaning Maidstone | Weekly & Fortnightly Domestic Cleaners",
     template: "%s",
   },
   icons: { icon: "/images/favicon.png" },

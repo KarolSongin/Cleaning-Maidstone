@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
+  // Keep editable SEO and sharing metadata in the initial head for every client.
+  htmlLimitedBots: /.*/,
   serverExternalPackages: ["@electric-sql/pglite"],
   outputFileTracingExcludes: {
     "/*": [

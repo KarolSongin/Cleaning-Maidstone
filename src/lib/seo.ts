@@ -21,7 +21,7 @@ export function metadata(
           url: "/opengraph-image",
           width: 1200,
           height: 630,
-          alt: "Cleaning Maidstone — a little more calm at home",
+          alt: "Cleaning Maidstone — weekly and fortnightly domestic cleaning",
         },
       ],
     },

@@ -5,25 +5,25 @@ export default function Image() {
   return new ImageResponse(
     <div
       style={{
-        background: "#f6f3ec",
+        background: "#eef5fa",
         width: "100%",
         height: "100%",
         display: "flex",
         padding: 80,
         flexDirection: "column",
         justifyContent: "center",
-        color: "#183c50",
+        color: "#183650",
       }}
     >
       <span style={{ fontSize: 28, letterSpacing: 5 }}>CLEANING MAIDSTONE</span>
       <span style={{ fontSize: 86, marginTop: 38, lineHeight: 1.1 }}>
-        A little more calm.
+        Domestic cleaning.
       </span>
-      <span style={{ fontSize: 86, color: "#bb6685" }}>
-        A lot less housework.
+      <span style={{ fontSize: 86, color: "#2673ab" }}>
+        More time for life.
       </span>
       <span style={{ fontSize: 26, marginTop: 40 }}>
-        Weekly & fortnightly domestic cleaning · Maidstone
+        Weekly & fortnightly · Maidstone · From £18/hour
       </span>
     </div>,
     size,

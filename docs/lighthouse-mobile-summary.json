@@ -1,32 +1,32 @@
 {
-  "measured_at": "2026-10-02T18:46:24.059Z",
+  "measured_at": "2026-10-02T21:23:02.645Z",
   "lighthouse_version": "13.5.0",
-  "environment": "Local production build; synthetic-data mode",
+  "environment": "Local production build; synthetic-data mode; first audited navigation after server restart, persistent demo data and existing server image cache; browser cache cold",
   "scores": {
-    "performance": 97,
+    "performance": 92,
     "accessibility": 100,
     "best-practices": 100,
     "seo": 100
   },
   "metrics": {
     "first-contentful-paint": {
-      "numeric_value": 880.03145,
+      "numeric_value": 1380.43755,
       "unit": "millisecond"
     },
     "largest-contentful-paint": {
-      "numeric_value": 2520.078625,
+      "numeric_value": 3304.4375499999996,
       "unit": "millisecond"
     },
     "total-blocking-time": {
-      "numeric_value": 69,
+      "numeric_value": 47,
       "unit": "millisecond"
     },
     "cumulative-layout-shift": {
-      "numeric_value": 0,
+      "numeric_value": 0.0005741140238641826,
       "unit": "unitless"
     },
     "speed-index": {
-      "numeric_value": 2151.274627999648,
+      "numeric_value": 1544.0479999995873,
       "unit": "millisecond"
     }
   },

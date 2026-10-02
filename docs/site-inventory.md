@@ -1,14 +1,14 @@
 # Live site inventory — 2 October 2026
 
-Crawled the homepage, navigation, footer links, robots.txt, sitemap index, page sitemap and block sitemap after network access was enabled. All five public pages were inspected. The sitemaps and internal navigation contain **no existing blog posts**. `/blocks/footer/` is an empty WordPress component endpoint, not a useful public page. Social networks and the external web designer are outbound links and were not crawled.
+Rechecked the five public pages and internal navigation during the public redesign on the same date. Crawled the homepage, navigation, footer links, robots.txt, sitemap index, page sitemap and block sitemap after network access was enabled. All five public pages were inspected. The sitemaps and internal navigation contain **no existing blog posts**. `/blocks/footer/` is an empty WordPress component endpoint, not a useful public page. Social networks and the external web designer are outbound links and were not crawled.
 
-| URL | Existing title | Existing description | Migration |
-| --- | --- | --- | --- |
-| / | Domestic Cleaners in Maidstone | Weekly House Cleaning | Reliable domestic cleaning in Maidstone with a regular assigned cleaner. Weekly and fortnightly home cleans. Check Cleaning Maidstone’s availability. | Preserve URL |
-| /maidstone-domestic-cleaning/ | Domestic Cleaning Maidstone | Weekly & Fortnightly Cleaner | Weekly and fortnightly domestic cleaning in Maidstone with an assigned regular cleaner. Clear prices, agreed priorities and local availability. | Preserve URL |
-| /about-us/ | About Cleaning Maidstone | Local Domestic Cleaners | Learn about Cleaning Maidstone, a local domestic-cleaning business focused on reliable weekly and fortnightly home cleaning. | Preserve URL |
-| /contact-us/ | Contact a Domestic Cleaner in Maidstone | Cleaning Maidstone | sk Cleaning Maidstone about weekly or fortnightly domestic-cleaning availability. Send your postcode and home details for a clear estimate. | Preserve URL |
-| /pricing/ | Domestic Cleaning Prices Maidstone | Weekly & Fortnightly | Clear domestic cleaning prices in Maidstone. Weekly cleaning from £18 per hour and fortnightly cleaning £19 per hour, with a three-hour minimum. | Preserve URL |
+| URL                           | Existing title                                                | Existing description                                                                                                                                  | Migration    |
+| ----------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| /                             | Domestic Cleaners in Maidstone \| Weekly House Cleaning       | Reliable domestic cleaning in Maidstone with a regular assigned cleaner. Weekly and fortnightly home cleans. Check Cleaning Maidstone’s availability. | Preserve URL |
+| /maidstone-domestic-cleaning/ | Domestic Cleaning Maidstone \| Weekly & Fortnightly Cleaner   | Weekly and fortnightly domestic cleaning in Maidstone with an assigned regular cleaner. Clear prices, agreed priorities and local availability.       | Preserve URL |
+| /about-us/                    | About Cleaning Maidstone \| Local Domestic Cleaners           | Learn about Cleaning Maidstone, a local domestic-cleaning business focused on reliable weekly and fortnightly home cleaning.                          | Preserve URL |
+| /contact-us/                  | Contact a Domestic Cleaner in Maidstone \| Cleaning Maidstone | sk Cleaning Maidstone about weekly or fortnightly domestic-cleaning availability. Send your postcode and home details for a clear estimate.           | Preserve URL |
+| /pricing/                     | Domestic Cleaning Prices Maidstone \| Weekly & Fortnightly    | Clear domestic cleaning prices in Maidstone. Weekly cleaning from £18 per hour and fortnightly cleaning £19 per hour, with a three-hour minimum.      | Preserve URL |
 
 ## Verified facts
 
@@ -25,17 +25,17 @@ Crawled the homepage, navigation, footer links, robots.txt, sitemap index, page 
 
 The older About page mentions eco-friendly practices, deep cleans, end-of-tenancy and ironing; the updated service/home copy explicitly limits the current offer. The original logo also mentions ironing. The scaffold preserves the original logo but follows the current service scope in page copy. The website displays a Google 5.0 rating without an inspectable review link or count; no fabricated testimonial or independently verified review claim is added. No public office address was found, so none is supplied in copy or JSON-LD.
 
-`/contact` resolves to `/contact-us/` on the live site. The scaffold makes this a single permanent 308 redirect. Trailing-slash canonical paths are retained; all internal links use them. `/#book` remains the enquiry section. Legacy `/sitemap_index.xml`, `/page-sitemap.xml` and `/wp-sitemap.xml` redirect directly to the new `/sitemap.xml`. The old block-only sitemap/component endpoints return 404 and are excluded. Unknown URLs return 404 rather than a homepage redirect. New blog content is clearly new editorial content, not a migrated existing article.
+`/contact` resolves to `/contact-us/` on the live site. The scaffold makes this a single permanent 308 redirect. Trailing-slash canonical paths are retained; all internal links use them. `/#book` remains the enquiry section. Legacy `/sitemap_index.xml`, `/page-sitemap.xml` and `/wp-sitemap.xml` redirect directly to the new `/sitemap.xml`. The old block-only sitemap/component endpoints return 404 and are excluded. Unknown URLs return 404 rather than a homepage redirect. New blog content is clearly new editorial content, not a migrated existing article. The live homepage also contains a WhatsApp link to `https://wa.me/447767211725`; that contact destination is retained.
 
 ## Existing brand assets
 
-| Local asset | Existing source |
-| --- | --- |
-| `public/images/logo.png` | `/wp-content/uploads/2024/08/Cleaning-Maidstone-logo.png` |
-| `public/images/kitchen.webp` | `/wp-content/uploads/2024/08/cleaning-maidstone-home-banner.png` |
+| Local asset                   | Existing source                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| `public/images/logo.png`      | `/wp-content/uploads/2024/08/Cleaning-Maidstone-logo.png`                       |
+| `public/images/kitchen.webp`  | `/wp-content/uploads/2024/08/cleaning-maidstone-home-banner.png`                |
 | `public/images/bathroom.webp` | `/wp-content/uploads/2024/08/cleaning-maidstone-clean-bathroom-with-shower.jpg` |
-| `public/images/favicon.png` | `/wp-content/uploads/2024/08/cropped-cleaning-maidstone-favicon-270x270.png` |
+| `public/images/favicon.png`   | `/wp-content/uploads/2024/08/cropped-cleaning-maidstone-favicon-270x270.png`    |
 
-Photographs are retained from the existing business website and locally optimised. They are not asserted to depict customer jobs. Brand colours are navy/blue, pink, white and the logo’s secondary teal. No public area pages were discovered; no repetitive generated area pages are added.
+Original photographs are retained from the existing business website and locally optimised. Additional locally served stock interiors and font licences are documented in [public-redesign.md](public-redesign.md). They are not asserted to depict customer jobs. Brand colours are navy/blue, pink, white and the logo’s secondary teal. No public area pages were discovered; no repetitive generated area pages are added.
 
 The full crawl records (text, links, headings, asset URLs and resolved destinations) are in `docs/live-site-inventory.json`.

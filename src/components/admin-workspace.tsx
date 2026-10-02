@@ -724,8 +724,9 @@ export function AdminWorkspace({
             </ul>
             <p className="form-small">
               Use the existing page slugs to add edited copy. Use “home” for an
-              additional homepage introduction. New area pages should describe
-              verified coverage and contain useful, distinct information.
+              additional homepage copy before the enquiry form. New area pages
+              should describe verified coverage and contain useful, distinct
+              information.
             </p>
           </section>
           <section className="panel">

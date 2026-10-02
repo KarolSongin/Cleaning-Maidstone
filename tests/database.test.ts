@@ -96,7 +96,27 @@ describe("database permissions", () => {
       ),
     ).toEqual([]);
   });
-  it("cleaners only transition their own job in order", async () => {
+  it("cleaners cannot edit the rota and only transition their own job in order", async () => {
+    const [originalJob] = await cleaner<{ id: string }>(
+      "select * from cleaner_jobs()",
+    );
+    for (const change of [
+      { id: originalJob.id, starts_at: "2031-01-06T09:00:00Z" },
+      { id: originalJob.id, status: "cancelled" },
+    ]) {
+      await expect(
+        cleaner("select change_visit($1)", [JSON.stringify(change)]),
+      ).rejects.toThrow(/Admin access/);
+    }
+    await expect(
+      cleaner(
+        "update visits set starts_at=starts_at + interval '1 hour' where id=$1",
+        [originalJob.id],
+      ),
+    ).rejects.toThrow(/permission denied/);
+    expect(await cleaner("select * from cleaner_jobs()")).toContainEqual(
+      originalJob,
+    );
     const [{ id }] = await cleaner<{ id: string }>(
       "select id from cleaner_jobs()",
     );

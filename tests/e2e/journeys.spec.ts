@@ -18,15 +18,19 @@ test("public content, metadata, mobile layout and keyboard navigation", async ({
 }) => {
   const response = await request.get("/");
   expect(response.status()).toBe(200);
-  const html = await response.text();
-  expect(html).toContain("A little more");
+  const html = (await response.text()).replaceAll("<!-- -->", "");
+  expect(html).toContain("Domestic cleaning");
+  expect(html).toContain("Weekly domestic cleaning");
+  expect(html).toContain("Fortnightly domestic cleaning");
+  expect(html).toContain("Bearsted");
   expect(html).toContain("07767 211 725");
   expect(html).toContain("marta@cleaningmaidstone.co.uk");
   expect(html).toContain('rel="canonical"');
   expect(html).toContain("application/ld+json");
+  expect(html.split("</head>")[0]).toContain('name="description"');
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "A little more",
+    "Domestic cleaning",
   );
   expect(
     await page.evaluate(
@@ -55,6 +59,102 @@ test("public content, metadata, mobile layout and keyboard navigation", async ({
     path: `test-results/public-${test.info().project.name}.png`,
     fullPage: true,
   });
+});
+test("public service, pricing and contact pages retain useful local information", async ({
+  page,
+}) => {
+  for (const [path, heading] of [
+    ["/maidstone-domestic-cleaning/", "Regular domestic cleaning in Maidstone"],
+    ["/pricing/", "Domestic cleaning prices in Maidstone"],
+    ["/about-us/", "Local Maidstone cleaners"],
+    ["/contact-us/", "Contact Cleaning Maidstone"],
+    ["/blog/", "Practical advice"],
+  ]) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      heading,
+    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+  await page.goto("/pricing/");
+  for (const price of ["£18", "£22", "£19", "£23"])
+    await expect(page.locator(".pricing-table")).toContainText(price);
+  await page.goto("/maidstone-domestic-cleaning/");
+  await expect(
+    page.getByRole("heading", {
+      name: "Cleaning products, equipment and special surfaces",
+    }),
+  ).toBeVisible();
+  await expect(page.locator("main")).toContainText("laundry");
+  await expect(page.locator("main")).toContainText("vacuum cleaner");
+  if ((page.viewportSize()?.width || 1440) <= 760) {
+    await page.locator(".mobile-nav summary").click();
+    await page
+      .getByRole("navigation", { name: "Mobile navigation" })
+      .getByRole("link", { name: "Contact", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/contact-us\/$/);
+  }
+});
+test("cleaner calendar shows assigned jobs and denies rota changes", async ({
+  page,
+}) => {
+  await login(page, "cleaner");
+  const before = await (await page.request.get("/api/operations/")).json();
+  expect(before.jobs.length).toBeGreaterThan(0);
+  await page
+    .getByRole("button", { name: "Calendar view", exact: true })
+    .click();
+  await expect(page.locator(".cleaner-calendar")).toBeVisible();
+  await expect(
+    page.getByText("Your admin manages the rota.", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Month", exact: true }).click();
+  const event = page.locator(".cleaner-calendar .fc-event").first();
+  await expect(event).toBeVisible();
+  await event.focus();
+  await page.keyboard.press("Enter");
+  const detail = page.getByRole("region", { name: "Assigned visit" });
+  await expect(detail).toBeFocused();
+  await expect(detail.locator("address")).toContainText("ME");
+  await expect(
+    page.locator(".cleaner-calendar .fc-event-draggable"),
+  ).toHaveCount(0);
+  await expect(page.locator(".cleaner-calendar .fc-event-resizer")).toHaveCount(
+    0,
+  );
+  await page.getByRole("button", { name: "Close visit details" }).click();
+  await expect(detail).toHaveCount(0);
+  for (const name of ["Week", "Day"])
+    await page.getByRole("button", { name, exact: true }).click();
+  const job = before.jobs[0];
+  for (const data of [
+    { id: job.id, starts_at: "2031-01-06T09:00:00Z" },
+    { id: job.id, status: "cancelled" },
+  ]) {
+    const denied = await page.request.post("/api/operations/", {
+      headers: { origin },
+      data: { action: "visit", data },
+    });
+    expect(denied.status()).toBe(403);
+  }
+  const after = await (await page.request.get("/api/operations/")).json();
+  expect(after.jobs).toEqual(before.jobs);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/cleaner-calendar-" + test.info().project.name + ".png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "List view", exact: true }).click();
+  await expect(page.locator(".job-card").first()).toBeVisible();
 });
 test("enquiry validation and persistence in the admin inbox", async ({
   page,
@@ -233,6 +333,73 @@ test("publishing and unpublishing refresh the article and sitemap", async ({
     maxRedirects: 0,
   });
   expect(preview.status()).toBe(307);
+});
+test("homepage publishes server-rendered copy and SEO metadata while hiding drafts", async ({
+  page,
+  request,
+}) => {
+  await login(page, "admin");
+  const existing = await (await page.request.get("/api/operations/")).json();
+  const previous = existing.content.find(
+    (c: { kind: string; slug: string }) =>
+      c.kind === "page" && c.slug === "home",
+  );
+  const title = "Homepage publishing check " + test.info().project.name;
+  const text = "Synthetic homepage copy " + Date.now();
+  const content = {
+    ...(previous ? { id: previous.id } : {}),
+    kind: "page",
+    slug: "home",
+    title,
+    seo_title: title,
+    seo_description: "A synthetic description to verify homepage publishing.",
+    body: {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text }] }],
+    },
+    status: "published",
+  };
+  const response = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: { action: "content", data: content },
+  });
+  expect(response.status()).toBe(200);
+  const { id } = await response.json();
+  try {
+    const published = await (await request.get("/")).text();
+    expect(published).toContain(text);
+    const head = published.split("</head>")[0];
+    expect(head).toContain("<title>" + title + "</title>");
+    expect(head).toContain(content.seo_description);
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      "Domestic cleaning",
+    );
+    await expect(page.getByText(text, { exact: true })).toBeVisible();
+    const unpublish = await page.request.post("/api/operations/", {
+      headers: { origin },
+      data: { action: "content", data: { ...content, id, status: "draft" } },
+    });
+    expect(unpublish.status()).toBe(200);
+    const draft = await (await request.get("/")).text();
+    expect(draft).not.toContain(text);
+    expect(draft).not.toContain(title);
+  } finally {
+    if (previous) {
+      const restored = await page.request.post("/api/operations/", {
+        headers: { origin },
+        data: {
+          action: "content",
+          data: {
+            ...previous,
+            image_path: previous.image_path || "",
+            published_at: previous.published_at || "",
+          },
+        },
+      });
+      expect(restored.status()).toBe(200);
+    }
+  }
 });
 test("sample events deduplicate and expose transcription failure honestly", async ({
   page,

@@ -1,12 +1,14 @@
 import Link from "next/link";
+import Image from "next/image";
+import { ArrowUpRight } from "lucide-react";
 import { publishedContent } from "@/lib/repository";
 import { metadata } from "@/lib/seo";
 import { londonDate } from "@/lib/scheduling";
 export const dynamic = "force-dynamic";
 export const generateMetadata = () =>
   metadata(
-    "The journal | Cleaning Maidstone",
-    "Practical thoughts on a calmer home and making the most of regular domestic cleaning.",
+    "House Cleaning Advice & Home Journal | Cleaning Maidstone",
+    "Practical house-cleaning advice, preparing for a regular cleaner and making the most of weekly or fortnightly domestic cleaning.",
     "/blog/",
   );
 export default async function Blog() {
@@ -16,13 +18,12 @@ export default async function Blog() {
       <section className="section page-intro">
         <p className="eyebrow">The Cleaning Maidstone journal</p>
         <h1>
-          A little inspiration
-          <br />
-          for life at home.
+          Practical advice for
+          <br />a cleaner home.
         </h1>
         <p>
-          Practical ideas, everyday routines and a calmer approach to keeping
-          your home.
+          Everyday cleaning advice, useful routines and ideas to help you get
+          more from your regular domestic clean.
         </p>
       </section>
       <section className="section blog-grid">
@@ -33,13 +34,28 @@ export default async function Blog() {
               key={post.id}
               href={"/blog/" + post.slug + "/"}
             >
-              <span>
-                {post.category || "At home"} ·{" "}
-                {post.published_at && londonDate(post.published_at)}
-              </span>
-              <h2>{post.title}</h2>
-              <p>{post.excerpt}</p>
-              <span className="text-link">Read the story ↗</span>
+              <div className="blog-card-photo">
+                <Image
+                  src={post.image_path || "/images/home-detail.webp"}
+                  alt={
+                    post.image_alt || "A light-filled living and dining space"
+                  }
+                  fill
+                  sizes="(max-width:760px) 100vw, 33vw"
+                  unoptimized={!!post.image_path}
+                />
+              </div>
+              <div className="blog-card-body">
+                <span>
+                  {post.category || "At home"} ·{" "}
+                  {post.published_at && londonDate(post.published_at)}
+                </span>
+                <h2>{post.title}</h2>
+                <p>{post.excerpt}</p>
+                <span className="text-link">
+                  Read the article <ArrowUpRight size={17} />
+                </span>
+              </div>
             </Link>
           ))
         ) : (

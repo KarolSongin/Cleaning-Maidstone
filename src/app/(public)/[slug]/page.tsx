@@ -1,15 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, Check } from "lucide-react";
+import { ArrowUpRight, Check, Phone, Mail, Clock } from "lucide-react";
 import { metadata, breadcrumbs } from "@/lib/seo";
 import { business, serviceTasks } from "@/lib/business";
 import { publicContent } from "@/lib/repository";
 import { ContentBody } from "@/components/content-renderer";
-import { EnquiryForm } from "@/components/enquiry-form";
+import { BookingSection } from "@/components/booking-section";
 import { JsonLd } from "@/components/json-ld";
 import { Button } from "@/components/ui/button";
-import { demoEnabled } from "@/lib/local-db";
 const pages: Record<
   string,
   { title: string; description: string; heading: string; intro: string }
@@ -18,33 +17,33 @@ const pages: Record<
     title: "Domestic Cleaning Maidstone | Weekly & Fortnightly Cleaner",
     description:
       "Weekly and fortnightly domestic cleaning in Maidstone with an assigned regular cleaner. Clear prices, agreed priorities and local availability.",
-    heading: "A dependable routine. A home that feels like you.",
+    heading: "Regular domestic cleaning in Maidstone.",
     intro:
-      "Weekly and fortnightly domestic cleaning works best when your cleaner knows your home. We agree the important rooms, surfaces and tasks, then build a useful routine around the time booked.",
+      "Looking for a regular cleaner in Maidstone? Our weekly and fortnightly domestic cleaning service helps you keep on top of kitchens, bathrooms, dust and floors. We agree the priority rooms before your first visit and aim to assign the same familiar cleaner wherever possible.",
   },
   "about-us": {
     title: "About Cleaning Maidstone | Local Domestic Cleaners",
     description:
       "Learn about Cleaning Maidstone, a local domestic-cleaning business focused on reliable weekly and fortnightly home cleaning.",
-    heading: "Local people. A personal approach.",
+    heading: "Local Maidstone cleaners. A personal approach.",
     intro:
-      "Cleaning Maidstone is a local business focused on regular domestic cleaning. Customers deal directly with us and receive a clearly assigned cleaner, wherever possible. We record your priorities so each visit starts with an understanding of your home.",
+      "Cleaning Maidstone is a local domestic-cleaning business focused on dependable weekly and fortnightly appointments. You deal directly with us. We get to know your home, record your priorities and work towards a routine that feels familiar from one visit to the next.",
   },
   "contact-us": {
     title: "Contact a Domestic Cleaner in Maidstone | Cleaning Maidstone",
     description:
       "Ask Cleaning Maidstone about weekly or fortnightly domestic-cleaning availability. Send your postcode and home details for a clear estimate.",
-    heading: "Let’s talk about your home.",
+    heading: "Contact Cleaning Maidstone.",
     intro:
-      "Looking for a weekly or fortnightly cleaner in Maidstone? Send a few details and suitable days. We’ll check the local schedule and recommend a realistic visit length.",
+      "Looking for a weekly or fortnightly domestic cleaner in Maidstone? Call, email or send your home details below. We’ll check the local diary, discuss your priorities and recommend a realistic visit length and price.",
   },
   pricing: {
     title: "Domestic Cleaning Prices Maidstone | Weekly & Fortnightly",
     description:
       "Clear domestic cleaning prices in Maidstone. Weekly cleaning from £18 per hour and fortnightly cleaning from £19 per hour, with a three-hour minimum.",
-    heading: "Clear prices. Thoughtful care.",
+    heading: "Domestic cleaning prices in Maidstone.",
     intro:
-      "Regular cleaning is charged by the hour, with a three-hour minimum. Choose your own products and cloths, or let us bring them. We agree the priorities and timing before your appointment.",
+      "Weekly domestic cleaning starts at £18 per hour and fortnightly cleaning at £19 per hour, with a three-hour minimum. Choose your own cleaning products and cloths, or ask us to bring them at our clearly stated higher rate. We agree the time and priorities before your appointment.",
   },
   privacy: {
     title: "Privacy notice | Cleaning Maidstone",
@@ -183,7 +182,13 @@ export default async function Page({
           {slug === "maidstone-domestic-cleaning" && (
             <section className="section two-column">
               <div className="prose">
-                <h2>The everyday, looked after.</h2>
+                <h2>What our regular domestic cleaners can take care of</h2>
+                <p>
+                  We focus on the everyday cleaning that makes your home
+                  comfortable to live in. Your checklist is prioritised to fit
+                  the time booked; a three-hour visit cannot always cover every
+                  task in a larger or heavily used home.
+                </p>
                 <ul className="check-list">
                   {serviceTasks.map((task) => (
                     <li key={task}>
@@ -192,6 +197,26 @@ export default async function Page({
                     </li>
                   ))}
                 </ul>
+                <div className="service-detail-card">
+                  <h3>Weekly domestic cleaning</h3>
+                  <p>
+                    A weekly appointment suits busy family homes, homes with
+                    pets and anyone who wants kitchens, bathrooms and floors
+                    maintained consistently. It is a useful way to stop everyday
+                    housework building up between visits.
+                  </p>
+                  <h3>Fortnightly domestic cleaning</h3>
+                  <p>
+                    A clean every other week suits quieter homes and households
+                    that can manage light upkeep in between. With more time for
+                    dust and limescale to build up, fortnightly visits are
+                    priced slightly higher.
+                  </p>
+                  <Link href="/pricing/" className="text-link">
+                    Compare weekly and fortnightly prices{" "}
+                    <ArrowUpRight size={18} />
+                  </Link>
+                </div>
                 <h2>What’s outside the regular service?</h2>
                 <p>
                   End-of-tenancy, commercial, post-building, carpet extraction,
@@ -202,42 +227,112 @@ export default async function Page({
                 </p>
                 <h2>Before the first visit</h2>
                 <p>
-                  Tell us about allergies, pets, parking, delicate surfaces and
-                  any preferred products. Please have your vacuum cleaner and
-                  mop ready. We agree which rooms need the most attention and
-                  what fits in the time booked.
+                  Your first clean may need more time than later maintenance
+                  visits, especially if some rooms have not been cleaned
+                  thoroughly recently. Tell us honestly about the size of your
+                  home, its current condition and the rooms that matter most. We
+                  will suggest a realistic first appointment and agree any extra
+                  time before work begins.
+                </p>
+                <h2>Cleaning products, equipment and special surfaces</h2>
+                <p>
+                  You provide a safe, working vacuum cleaner and a mop suitable
+                  for your floors in both pricing options. You can supply your
+                  own cleaning products and cloths, or we can bring standard
+                  products and cloths at the higher hourly rate.
+                </p>
+                <p>
+                  Please mention allergies, pets, natural stone, untreated wood,
+                  delicate finishes and products you prefer us to use or avoid.
+                  Product labels and manufacturer instructions take priority
+                  when caring for special surfaces.
+                </p>
+                <h2>How to request a regular cleaning slot</h2>
+                <p>
+                  Send your postcode, number of bedrooms and bathrooms, weekly
+                  or fortnightly preference and two or three suitable days or
+                  time windows. Include parking, access and any priority rooms.
+                  We check the local route, recommend the appointment length and
+                  discuss availability with you.
                 </p>
                 <Link href="/pricing/" className="text-link">
                   See clear hourly prices <ArrowUpRight size={18} />
                 </Link>
               </div>
-              <div className="page-photo">
-                <Image
-                  src="/images/bathroom.webp"
-                  alt="Bathroom photograph used on the existing Cleaning Maidstone website"
-                  fill
-                  sizes="(max-width:760px) 100vw, 40vw"
-                />
-              </div>
+              <aside className="service-aside">
+                <div className="page-photo">
+                  <Image
+                    src="/images/bathroom.webp"
+                    alt="Clean bathroom with a walk-in shower and tiled floors"
+                    fill
+                    sizes="(max-width:760px) 100vw, 40vw"
+                  />
+                </div>
+                <div className="service-quick-price">
+                  <p className="eyebrow">Your regular clean</p>
+                  <h3>
+                    Clear prices.
+                    <br />A useful routine.
+                  </h3>
+                  <p>
+                    Weekly from <strong>£18/hour</strong>
+                    <br />
+                    Fortnightly from <strong>£19/hour</strong>
+                  </p>
+                  <small>
+                    With your products and cloths.
+                    <br />
+                    Three-hour minimum. You provide a vacuum and mop.
+                  </small>
+                  <Button asChild>
+                    <Link href="#book">
+                      Check availability
+                      <ArrowUpRight size={17} />
+                    </Link>
+                  </Button>
+                </div>
+              </aside>
             </section>
           )}
           {slug === "about-us" && (
             <section className="section two-column">
               <div className="page-photo">
                 <Image
-                  src="/images/kitchen.webp"
-                  alt="A bright kitchen from the Cleaning Maidstone website"
+                  src="/images/home-detail.webp"
+                  alt="A bright home with dining and living spaces opening onto a garden"
                   fill
                   sizes="(max-width:760px) 100vw, 40vw"
                 />
               </div>
               <div className="prose">
-                <h2>Care that gets to know your home.</h2>
+                <h2>A local business, built around regular home cleaning</h2>
                 <p>
-                  Our focus is dependable weekly and fortnightly appointments,
-                  clear communication and consistent standards. We learn how you
-                  like your home cared for and keep the diary organised around
-                  local routes.
+                  Cleaning Maidstone focuses on regular domestic cleaning rather
+                  than trying to cover every specialist service. Our approach is
+                  straightforward: organise dependable weekly and fortnightly
+                  appointments, communicate clearly and learn how you like your
+                  home cared for.
+                </p>
+                <p>
+                  Every household has different priorities. For some, it is
+                  keeping the kitchen and bathrooms fresh. For others, it is the
+                  dust, floors and busy family spaces that need attention. We
+                  listen before the first clean and agree a useful routine for
+                  the time you book.
+                </p>
+                <h2>A familiar cleaner makes a difference</h2>
+                <p>
+                  We aim to assign the same regular cleaner wherever possible.
+                  Familiarity means less time explaining your rooms, preferred
+                  products and priorities at every appointment. If holiday cover
+                  or a permanent change is needed, we let you know in advance.
+                </p>
+                <h2>Clear communication, from the first enquiry</h2>
+                <p>
+                  You deal directly with Cleaning Maidstone. We check the local
+                  diary, suggest a realistic visit length and explain the hourly
+                  rate before an appointment is agreed. If a first clean needs
+                  more time, that is discussed with you first.
                 </p>
                 <h2>In your neighbourhood</h2>
                 <p>
@@ -249,6 +344,38 @@ export default async function Page({
                   Say hello <ArrowUpRight size={18} />
                 </Link>
               </div>
+            </section>
+          )}
+          {slug === "contact-us" && (
+            <section className="section contact-options">
+              <article className="contact-option">
+                <Phone size={25} />
+                <h2>Give us a call</h2>
+                <a href={"tel:" + business.tel}>{business.phone}</a>
+                <p>
+                  Talk through your home, preferred days and cleaning
+                  priorities.
+                </p>
+              </article>
+              <article className="contact-option">
+                <Mail size={25} />
+                <h2>Send an email</h2>
+                <a href={"mailto:" + business.email}>{business.email}</a>
+                <p>
+                  Include your postcode and whether you need weekly or
+                  fortnightly cleaning.
+                </p>
+              </article>
+              <article className="contact-option">
+                <Clock size={25} />
+                <h2>When to reach us</h2>
+                <p>
+                  {business.hours}.<br />
+                  Saturday and Sunday closed.
+                  <br />
+                  Appointments depend on the local diary.
+                </p>
+              </article>
             </section>
           )}
           {slug === "privacy" && (
@@ -285,28 +412,7 @@ export default async function Page({
           )}
         </>
       )}
-      {slug !== "privacy" && (
-        <section id="book" className="booking-section section">
-          <div>
-            <p className="eyebrow">Your first step</p>
-            <h2>
-              Tell us what
-              <br />
-              home means to you.
-            </h2>
-            <p>
-              We’ll confirm availability, estimated cleaning time and price
-              together. Submitting this enquiry does not confirm a booking.
-            </p>
-            <a className="contact-large" href={"tel:" + business.tel}>
-              {business.phone}
-            </a>
-            <a href={"mailto:" + business.email}>{business.email}</a>
-            <small>{business.hours}</small>
-          </div>
-          <EnquiryForm demo={demoEnabled()} />
-        </section>
-      )}
+      {slug !== "privacy" && <BookingSection />}
     </main>
   );
 }

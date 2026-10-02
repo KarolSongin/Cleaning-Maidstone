@@ -132,15 +132,15 @@ export function RoomExperience() {
         )}
       </div>
       <div>
-        <p className="eyebrow">Care in the little things</p>
+        <p className="eyebrow">Take a closer look</p>
         <h2>
-          A home that feels
+          Explore the
           <br />
-          looked after.
+          little things.
         </h2>
         <p>
-          A regular clean brings the everyday back into balance. Explore a few
-          of the tasks we can prioritise in your home.
+          From reachable surfaces to floors and your agreed priorities, explore
+          some of the details in a regular domestic clean.
         </p>
         <div
           className="room-tabs"
