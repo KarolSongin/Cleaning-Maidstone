@@ -1,14 +1,14 @@
 # Verification — 2–3 October 2026
 
-Verified in this cloud checkout with Node 24.19.0, npm 11.9.0, Next.js 16.3.8 and system Chromium. The current photo-quality update passed the public-page checks below. The preceding iteration passed the full operational suite, including the read-only cleaner calendar; this update changes public images and their delivery. No existing domain, production data or phone routing was changed.
+Verified in this cloud checkout with Node 24.19.0, npm 11.9.0, Next.js 16.3.8 and system Chromium. The current public refinement adds social links, a scrolling quote and linked five-star Google badges; its checks are recorded below. The preceding iteration passed the full operational suite, including the read-only cleaner calendar. No existing domain, production data or phone routing was changed.
 
 | Check                                                      | Result                                                                                                     |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | Frozen dependency installation / saved installation script | Passed `npm ci` followed by the production build                                                           |
 | `npm run lint`                                             | Passed                                                                                                     |
 | `npm run typecheck`                                        | Passed; the final production build also passed TypeScript checks                                           |
-| `npm run test`                                             | Previous iteration: 21 tests passed; backend code is unchanged in the photo update                         |
-| Public browser journeys                                    | Logo update: four passed; photo update: eight passed; preceding full suite: 18 passed                      |
+| `npm run test`                                             | Previous iteration: 21 tests passed; backend code is unchanged in these public refinements                 |
+| Public browser journeys                                    | Current social/rating update: eight passed; preceding full suite: 18 passed                                |
 | Delivered photo resolution                                 | 33 images checked across 15 desktop/tablet/mobile route visits; every file meets the panel's pixel needs   |
 | `npm run build`                                            | Passed; server-rendered public routes and operational/API routes compiled                                  |
 | Production startup                                         | Homepage, pricing, robots and sitemap return HTTP 200; anonymous admin access redirects to login           |
@@ -26,23 +26,27 @@ The photo-quality check visited the homepage, Services, About, Prices and Journa
 
 The logo refinement was checked on 3 October: production build, lint and type checks passed, along with four desktop/mobile browser journeys using `npm run test:e2e -- --grep 'public content|public service'`. Separate header checks covered widths 320, 360, 390, 540, 760, 900, 1,100, 1,101, 1,280, 1,440 and 1,920 pixels at 3× mobile or 2× desktop density. The logo displayed at its intended larger sizes, returned HTTP 200, and matched the full-resolution original PNG byte for byte. No controls overlapped, no horizontal overflow appeared, and no browser runtime errors occurred. Screenshots and measurements are under the ignored `.local/logo-*.png` and `.local/logo-checks.json` files.
 
+The social/rating update also passed production build, lint, type checks and the eight relevant public/publishing journeys. Separate checks made 32 visits across the homepage, Services, About, Prices, Contact, Privacy, Journal and a published article, at widths 1,440, 900, 390 and 320 pixels. Every hero contained one linked 5.0 Google badge with exactly five stars, with no horizontal overflow or clipping. All three social links retained their verified destinations, accessible names and safe new-tab attributes; the telephone link remained correct. The quote moved right to left, paused manually and on keyboard focus, resumed through keyboard activation, and covered its window throughout the loop. Reduced-motion checks at desktop and mobile widths showed one static wrapping quote and no pause control. No browser runtime errors occurred. Screenshots and detailed results are in ignored `.local/social-rating-*.png` and `.local/social-rating*-checks.json` files.
+
 ## Measured mobile performance
 
-Lighthouse 13.5.0 measured the production homepage with the photo-quality update in commit `4507ebf` at 23:48 BST (22:48 UTC) on 2 October 2026, before the logo refinement. It used mobile simulated throttling (4× CPU slowdown, 150 ms RTT, approximately 1.6 Mbps throughput). This is a local laboratory measurement, not deployed-site or field data. It was the first audited navigation after restarting the production server, with a persistent synthetic database, an existing server image cache and a cold browser cache. The mobile crop was served directly as a pre-encoded asset. No Lighthouse runtime errors or warnings were reported. A new performance audit was not run for the small logo change.
+Lighthouse 13.5.0 measured the production homepage with the final social/rating update at 00:50 BST on 3 October 2026. It used mobile simulated throttling (4× CPU slowdown, 150 ms RTT, approximately 1.6 Mbps throughput). This is a local laboratory measurement, not deployed-site or field data. It was the first audited navigation after restarting the production server, with a persistent synthetic database, an existing server image cache and a cold browser cache. The quote animation was active. No Lighthouse runtime errors or warnings were reported; the rating link passed the visible-label/accessibility-name check.
 
 | Metric                               | Target             | Measured                                 |
 | ------------------------------------ | ------------------ | ---------------------------------------- |
-| Performance score                    | At least 90        | **89**, below the target                 |
+| Performance score                    | At least 90        | **93**                                   |
 | Accessibility / Best Practices / SEO | —                  | **100 / 100 / 100**                      |
-| Largest Contentful Paint             | At or below 2.5 s  | **3.724 s**, above the target            |
-| Cumulative Layout Shift              | At or below 0.1    | **0.000570**                             |
-| First Contentful Paint               | —                  | **1.384 s**                              |
-| Total Blocking Time                  | —                  | **80.5 ms**                              |
+| Largest Contentful Paint             | At or below 2.5 s  | **3.165 s**, above the target            |
+| Cumulative Layout Shift              | At or below 0.1    | **0.002335**                             |
+| First Contentful Paint               | —                  | **1.065 s**                              |
+| Total Blocking Time                  | —                  | **66 ms**                                |
 | Interaction to Next Paint            | At or below 200 ms | Not measured; field INP needs real usage |
 
-The layout-shift target passed; the performance-score and 2.5-second LCP targets remain unmet in this cold-start local measurement. The image is eagerly loaded at high priority with sizes that preserve its required pixel density. The mobile crop reduced the hero transfer from approximately 155 KB to 71 KB compared with the high-resolution landscape delivery tested during this update; that intermediate build scored 83. The previous redesign's lower-resolution delivery scored 92, which is not the score of this final photo-quality build. The score does not establish full accessibility conformance. Total Blocking Time is a lab diagnostic and is not a substitute for INP. The public bundle keeps calendar, editor, 3D and server-side validation dependencies out of the initial public load.
+The performance-score and layout-shift targets passed; the 2.5-second LCP target remains unmet in this cold-start local measurement. The score does not establish full accessibility conformance. Total Blocking Time is a lab diagnostic and is not a substitute for INP. The public bundle keeps calendar, editor, 3D and server-side validation dependencies out of the initial public load. The current score belongs to this build; prior photo-quality and logo builds have separate retained local reports.
 
-Machine-readable measured values are in [lighthouse-mobile-summary.json](lighthouse-mobile-summary.json). The full local report is `.local/lighthouse-photo-quality-final-mobile.json`; photo screenshots and decoded-resolution results are retained under `.local/photo-quality/`. These files and browser-run screenshots under `test-results/` are ignored by Git. Previous dashboard screenshots remain under `.local/`; the public-to-cleaner navigation check retained dashboard styling.
+Machine-readable measured values are in [lighthouse-mobile-summary.json](lighthouse-mobile-summary.json). The full local report is `.local/lighthouse-social-rating-final-mobile.json`. Current desktop/mobile screenshots are `.local/social-rating-desktop.png` and `.local/social-rating-mobile.png`; photo-resolution results remain under `.local/photo-quality/`. These files and browser-run screenshots under `test-results/` are ignored by Git.
+
+The final build emitted two Turbopack warnings about broad `.local/` patterns in the existing demo authentication/database code, with over 10,000 accumulated local files in this checkout. The build completed. All 33 deployment trace manifests were rechecked and excluded demo data, environment files and test output.
 
 ## Configuration still required
 

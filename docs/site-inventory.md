@@ -23,7 +23,7 @@ Rechecked the five public pages and internal navigation during the public redesi
 
 ## Content discrepancies and migration decisions
 
-The older About page mentions eco-friendly practices, deep cleans, end-of-tenancy and ironing; the updated service/home copy explicitly limits the current offer. The original logo also mentions ironing. The scaffold preserves the original logo but follows the current service scope in page copy. The website displays a Google 5.0 rating without an inspectable review link or count; no fabricated testimonial or independently verified review claim is added. No public office address was found, so none is supplied in copy or JSON-LD.
+The older About page mentions eco-friendly practices, deep cleans, end-of-tenancy and ironing; the updated service/home copy explicitly limits the current offer. The original logo also mentions ironing. The scaffold preserves the original logo but follows the current service scope in page copy. The website displays a Google 5.0 rating without an inspectable review link or count. On 3 October, the owner confirmed the 5.0 rating and supplied the Google business-profile link listed below; the new hero badge uses that confirmation. No review count or testimonial was invented. No public office address was found, so none is supplied in copy or JSON-LD.
 
 `/contact` resolves to `/contact-us/` on the live site. The scaffold makes this a single permanent 308 redirect. Trailing-slash canonical paths are retained; all internal links use them. `/#book` remains the enquiry section. Legacy `/sitemap_index.xml`, `/page-sitemap.xml` and `/wp-sitemap.xml` redirect directly to the new `/sitemap.xml`. The old block-only sitemap/component endpoints return 404 and are excluded. Unknown URLs return 404 rather than a homepage redirect. New blog content is clearly new editorial content, not a migrated existing article. The live homepage also contains a WhatsApp link to `https://wa.me/447767211725`; that contact destination is retained.
 
@@ -39,3 +39,13 @@ The older About page mentions eco-friendly practices, deep cleans, end-of-tenanc
 Original photographs are retained from the existing business website and locally optimised. Additional locally served stock interiors and font licences are documented in [public-redesign.md](public-redesign.md). They are not asserted to depict customer jobs. Brand colours are navy/blue, pink, white and the logo’s secondary teal. No public area pages were discovered; no repetitive generated area pages are added.
 
 The full crawl records (text, links, headings, asset URLs and resolved destinations) are in `docs/live-site-inventory.json`.
+
+## Social and Google destinations — 3 October 2026
+
+The homepage, About and Contact pages all contain these three social destinations:
+
+- Facebook: https://www.facebook.com/profile.php?id=61563915484605
+- Instagram: https://www.instagram.com/cleaning_maidstone/
+- X: https://x.com/MaidstoneClean
+
+The owner supplied https://share.google/np167DFyhdcAgl6eH for Google reviews. It returned HTTP 200 after redirecting to Google's Cleaning Maidstone business profile, identified by `kgmid=/g/11y7jl73ff`. The visible rating is the owner's confirmed 5.0 out of 5; it is maintained locally rather than fetched live.

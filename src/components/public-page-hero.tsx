@@ -11,6 +11,7 @@ import {
 import { Button } from "./ui/button";
 import { heroPhotoSizes } from "@/lib/photo-quality";
 import { PublicPhoto } from "./public-photo";
+import { GoogleRating } from "./google-rating";
 
 type Action = { href: string; label: string };
 export type PublicPageHeroProps = {
@@ -50,6 +51,7 @@ export function PublicPageHero({
         <h1>{heading}</h1>
         {tagline && <p className="hero-tagline">{tagline}</p>}
         <p className="hero-description">{description}</p>
+        <GoogleRating />
         <div className="hero-actions">
           <Button asChild>
             <Link href={primaryAction.href}>

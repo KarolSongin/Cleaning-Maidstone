@@ -5,6 +5,15 @@ export const business = {
   tel: "+447767211725",
   email: "marta@cleaningmaidstone.co.uk",
   whatsapp: "https://wa.me/447767211725",
+  socials: {
+    facebook: "https://www.facebook.com/profile.php?id=61563915484605",
+    instagram: "https://www.instagram.com/cleaning_maidstone/",
+    x: "https://x.com/MaidstoneClean",
+  },
+  googleReviews: {
+    rating: 5.0,
+    url: "https://share.google/np167DFyhdcAgl6eH",
+  },
   hours: "Monday to Friday, 8am–8pm",
   areas: [
     "Maidstone town centre",
@@ -20,6 +29,8 @@ export const business = {
     "Weavering",
   ],
 };
+export const publicQuote =
+  "A clean home. A clearer mind. More time for what matters.";
 export const serviceTasks = [
   "Dusting reachable surfaces and furniture",
   "Vacuuming carpets and rugs",

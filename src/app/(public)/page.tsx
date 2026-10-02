@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { PublicPhoto } from "@/components/public-photo";
+import { GoogleRating } from "@/components/google-rating";
 import { cache } from "react";
 import {
   ArrowUpRight,
@@ -87,6 +88,7 @@ export default async function Home() {
             fortnightly domestic cleaners get to know your home, your priorities
             and your routine.
           </p>
+          <GoogleRating />
           <div className="hero-actions">
             <Button asChild>
               <Link href="#book">

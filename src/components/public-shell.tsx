@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowUpRight,
-  Phone,
   Mail,
   MapPin,
   Menu,
@@ -11,6 +10,7 @@ import {
 } from "lucide-react";
 import { business } from "@/lib/business";
 import { Button } from "./ui/button";
+import { PublicTopBar } from "./public-top-bar";
 const links = [
   ["/maidstone-domestic-cleaning/", "Domestic cleaning"],
   ["/about-us/", "About us"],
@@ -21,14 +21,7 @@ const links = [
 export function PublicHeader() {
   return (
     <>
-      <div className="utility-bar">
-        <span>
-          <MapPin size={13} /> Local care for Maidstone homes
-        </span>
-        <a href={"tel:" + business.tel}>
-          <Phone size={13} /> {business.phone}
-        </a>
-      </div>
+      <PublicTopBar />
       <header className="site-header">
         <Link href="/" className="brand" aria-label="Cleaning Maidstone home">
           <Image

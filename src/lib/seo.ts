@@ -42,6 +42,7 @@ export function businessSchema() {
     url: business.url,
     telephone: business.tel,
     email: business.email,
+    sameAs: Object.values(business.socials),
     areaServed: business.areas.map((name) => ({ "@type": "Place", name })),
     openingHoursSpecification: [
       {

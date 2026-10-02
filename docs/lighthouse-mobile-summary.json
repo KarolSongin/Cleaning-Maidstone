@@ -1,33 +1,33 @@
 {
-  "measured_at": "2026-10-02T22:48:00.636Z",
-  "measured_at_london": "2026-10-02T23:48:00.636000+01:00",
+  "measured_at": "2026-10-02T23:50:20.686Z",
+  "measured_at_london": "2026-10-03T00:50:20.686000+01:00",
   "lighthouse_version": "13.5.0",
-  "environment": "Local production build with the photo-quality update; synthetic-data mode; first audited navigation after server restart, persistent demo data and existing server image cache; browser cache cold; mobile photo served as pre-encoded AVIF",
+  "environment": "Local production build with social links, scrolling quote and Google rating badges; synthetic-data mode; first audited navigation after server restart, persistent demo data and existing server image cache; browser cache cold; quote animation active",
   "scores": {
-    "performance": 89,
+    "performance": 93,
     "accessibility": 100,
     "best-practices": 100,
     "seo": 100
   },
   "metrics": {
     "first-contentful-paint": {
-      "numeric_value": 1383.7246499999999,
+      "numeric_value": 1065.3671,
       "unit": "millisecond"
     },
     "largest-contentful-paint": {
-      "numeric_value": 3724.22465,
+      "numeric_value": 3164.55065,
       "unit": "millisecond"
     },
     "total-blocking-time": {
-      "numeric_value": 80.49999999999977,
+      "numeric_value": 66,
       "unit": "millisecond"
     },
     "cumulative-layout-shift": {
-      "numeric_value": 0.0005696287580527436,
+      "numeric_value": 0.002334965349402773,
       "unit": "unitless"
     },
     "speed-index": {
-      "numeric_value": 1598.7587979988243,
+      "numeric_value": 1479.726905997452,
       "unit": "millisecond"
     }
   },
@@ -52,6 +52,5 @@
   },
   "runtime_error": null,
   "warnings": [],
-  "source_commit": "4507ebf9fa9e44317b97fb836d64c94671a5caca",
-  "benchmark_note": "Measured on the photo-quality build before the subsequent logo refinement, with the homepage room explorer removed and shared public-page heroes. The performance-score and LCP targets remain unmet."
+  "benchmark_note": "Measured on the final social/rating build, including the original PNG logo and refined accessible rating-link label. The performance-score and layout-shift targets passed; the LCP target remains unmet."
 }
