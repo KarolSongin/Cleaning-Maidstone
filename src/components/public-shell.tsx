@@ -32,13 +32,12 @@ export function PublicHeader() {
       <header className="site-header">
         <Link href="/" className="brand" aria-label="Cleaning Maidstone home">
           <Image
-            src="/images/logo.webp"
+            src="/images/logo.png"
             width={800}
             height={129}
             alt="Cleaning Maidstone"
-            sizes="(max-width: 760px) 205px, 265px"
             loading="eager"
-            quality={100}
+            unoptimized
           />
         </Link>
         <nav aria-label="Main navigation">

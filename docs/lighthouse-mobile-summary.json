@@ -52,5 +52,6 @@
   },
   "runtime_error": null,
   "warnings": [],
-  "benchmark_note": "Measured on the final photo-quality build with the homepage room explorer removed and shared public-page heroes. The performance-score and LCP targets remain unmet."
+  "source_commit": "4507ebf9fa9e44317b97fb836d64c94671a5caca",
+  "benchmark_note": "Measured on the photo-quality build before the subsequent logo refinement, with the homepage room explorer removed and shared public-page heroes. The performance-score and LCP targets remain unmet."
 }

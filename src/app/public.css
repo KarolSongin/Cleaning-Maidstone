@@ -136,7 +136,7 @@
   gap: 26px;
 }
 .public-site .brand {
-  width: 265px;
+  width: 285px;
 }
 .public-site .site-header nav {
   gap: 24px;
@@ -1419,7 +1419,7 @@
     gap: 16px;
   }
   .public-site .brand {
-    width: 205px;
+    width: 220px;
   }
   .public-site .site-header > .button {
     display: none;
@@ -1922,7 +1922,7 @@
     font-size: 8px;
   }
   .public-site .brand {
-    width: 185px;
+    width: 200px;
   }
   .public-site .hero h1 {
     font-size: 40px;
