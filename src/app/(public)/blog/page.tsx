@@ -5,6 +5,7 @@ import { publishedContent } from "@/lib/repository";
 import { metadata } from "@/lib/seo";
 import { londonDate } from "@/lib/scheduling";
 import { PublicPageHero } from "@/components/public-page-hero";
+import { journalPhotoSizes, photoQuality } from "@/lib/photo-quality";
 export const dynamic = "force-dynamic";
 export const generateMetadata = () =>
   metadata(
@@ -80,7 +81,8 @@ export default async function Blog() {
                       post.image_alt || "A light-filled living and dining space"
                     }
                     fill
-                    sizes="(max-width:760px) 100vw, 33vw"
+                    sizes={journalPhotoSizes}
+                    quality={photoQuality}
                     unoptimized={!!post.image_path}
                   />
                 </div>

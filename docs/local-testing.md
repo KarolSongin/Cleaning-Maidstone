@@ -94,7 +94,7 @@ $env:CHROMIUM_PATH = node -p "require('@playwright/test').chromium.executablePat
 npm run test:e2e
 ```
 
-The production build from step 5 is required. Browser tests start their own server on port 3001 and use a separate fresh database. On Linux, install Chromium system dependencies if Playwright reports missing libraries. The verified cloud results were 21 focused tests and 18 browser journeys; see [verification.md](verification.md).
+The production build from step 5 is required. Browser tests start their own server on port 3001 and use a separate fresh database. On Linux, install Chromium system dependencies if Playwright reports missing libraries. The preceding full cloud checks passed 21 focused tests and 18 browser journeys; the photo-quality update passed eight relevant public/publishing journeys and 33 delivered-image checks. See [verification.md](verification.md).
 
 ## Make changes later
 

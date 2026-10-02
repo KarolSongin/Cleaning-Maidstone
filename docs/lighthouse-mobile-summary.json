@@ -1,32 +1,33 @@
 {
-  "measured_at": "2026-10-02T21:23:02.645Z",
+  "measured_at": "2026-10-02T22:48:00.636Z",
+  "measured_at_london": "2026-10-02T23:48:00.636000+01:00",
   "lighthouse_version": "13.5.0",
-  "environment": "Local production build; synthetic-data mode; first audited navigation after server restart, persistent demo data and existing server image cache; browser cache cold",
+  "environment": "Local production build with the photo-quality update; synthetic-data mode; first audited navigation after server restart, persistent demo data and existing server image cache; browser cache cold; mobile photo served as pre-encoded AVIF",
   "scores": {
-    "performance": 92,
+    "performance": 89,
     "accessibility": 100,
     "best-practices": 100,
     "seo": 100
   },
   "metrics": {
     "first-contentful-paint": {
-      "numeric_value": 1380.43755,
+      "numeric_value": 1383.7246499999999,
       "unit": "millisecond"
     },
     "largest-contentful-paint": {
-      "numeric_value": 3304.4375499999996,
+      "numeric_value": 3724.22465,
       "unit": "millisecond"
     },
     "total-blocking-time": {
-      "numeric_value": 47,
+      "numeric_value": 80.49999999999977,
       "unit": "millisecond"
     },
     "cumulative-layout-shift": {
-      "numeric_value": 0.0005741140238641826,
+      "numeric_value": 0.0005696287580527436,
       "unit": "unitless"
     },
     "speed-index": {
-      "numeric_value": 1544.0479999995873,
+      "numeric_value": 1598.7587979988243,
       "unit": "millisecond"
     }
   },
@@ -51,6 +52,5 @@
   },
   "runtime_error": null,
   "warnings": [],
-  "source_commit": "137de3609c522e2bd65255dca2e2794db8433691",
-  "benchmark_note": "Measured before room explorer removal and the shared public-page hero update; not a new audit of the latest commit."
+  "benchmark_note": "Measured on the final photo-quality build with the homepage room explorer removed and shared public-page heroes. The performance-score and LCP targets remain unmet."
 }

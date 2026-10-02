@@ -38,6 +38,7 @@ export function PublicHeader() {
             alt="Cleaning Maidstone"
             sizes="(max-width: 760px) 205px, 265px"
             loading="eager"
+            quality={100}
           />
         </Link>
         <nav aria-label="Main navigation">

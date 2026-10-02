@@ -14,11 +14,12 @@ The original business logo, favicon, kitchen and bathroom assets remain in the p
 
 Additional stock interior images were downloaded and optimised locally. They are illustrative interiors, not photographs of Cleaning Maidstone customer jobs or its staff.
 
-| Local file                        | Source image                                                 |
-| --------------------------------- | ------------------------------------------------------------ |
-| public/images/living-room.webp    | https://images.unsplash.com/photo-1600210492486-724fe5c67fb0 |
-| public/images/home-detail.webp    | https://images.unsplash.com/photo-1600607687920-4e2a09cf159d |
-| public/images/kitchen-detail.webp | https://images.unsplash.com/photo-1556912172-45b7abe8b7e1    |
+| Local file                         | Source image                                                 |
+| ---------------------------------- | ------------------------------------------------------------ |
+| public/images/living-room.webp     | https://images.unsplash.com/photo-1600210492486-724fe5c67fb0 |
+| public/images/home-detail.webp     | https://images.unsplash.com/photo-1600607687920-4e2a09cf159d |
+| public/images/kitchen-detail.webp  | https://images.unsplash.com/photo-1556912172-45b7abe8b7e1    |
+| public/images/bathroom-detail.webp | https://images.unsplash.com/photo-1620626011761-996317b8d101 |
 
 Unsplash licence: https://unsplash.com/license. Assets are served by this application, so page visits do not fetch them from Unsplash.
 
@@ -29,3 +30,15 @@ The public copy makes no new claims about reviews, insurance, qualifications, of
 Public copy is server-rendered, including optional published homepage content before the enquiry form. Its content lookup is memoised within each request and shared with metadata. SEO and sharing metadata are included in the initial HTML head for every client, including on cold starts. Responsive image sizes account for the layout gutters, the hero image uses explicit high fetch priority, and the logo has a lossless WebP derivative.
 
 After owner review, the homepage room explorer was removed. Services, About, Prices, Contact, Privacy, the Journal, published articles and custom pages now share the homepage’s split photo hero, rounded pale-blue panel, blue italic accents and pink actions. Visible breadcrumb headers are removed; structured breadcrumb data is retained. Hero links lead to the relevant details or enquiry section, with spacing for the sticky header. Published page/article images appear once in the hero, retain their alternate text and fall back to the locally served interior photographs. Custom pages with no excerpt receive a useful service introduction. Existing 3D components are retained for a later design decision and are no longer imported by the homepage.
+
+The photo-quality update downloads 3,600-pixel-wide JPEG originals from these four sources, using `fit=max` and quality 95, and encodes the local WebP masters at quality 94. Visible photographs use Next.js quality 90; the original logo uses quality 100. Responsive sizes account for the source aspect ratio and the height needed by `object-fit: cover`, so tall panels do not enlarge undersized landscape images. Intermediate image widths reduce unnecessary downloads on high-density screens. The Service page uses the new stock bathroom photograph; its older recovered bathroom image remains available as a legacy asset. Published CMS images continue to use the uploaded original rather than changing remote access or uploaded records.
+
+On screens up to 540 pixels wide, the tall photo panels use square crops selected through `<picture>`, with AVIF at quality 80 and a WebP fallback at quality 90. Ten widths from 384 to 1,920 pixels preserve detail across screen densities. These variants are generated ahead of time, avoiding a first-request encoder delay and downloads of landscape areas hidden by the mobile panels. Desktop and tablet layouts retain their landscape composition and Next.js responsive optimisation. Published CMS images retain their original delivery.
+
+The generated mobile files are committed under `public/images/mobile/`; normal builds require no image downloads or regeneration. After replacing a local master, run this from the repository root with dependencies installed:
+
+```sh
+node scripts/generate-mobile-photos.mjs
+```
+
+The script uses Sharp supplied by the pinned Next.js dependency and never enlarges a source. Inspect the crops and commit the generated variants together with the source change.

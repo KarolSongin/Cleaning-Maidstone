@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   // Keep editable SEO and sharing metadata in the initial head for every client.
   htmlLimitedBots: /.*/,
+  images: {
+    qualities: [75, 90, 100],
+    deviceSizes: [
+      640, 750, 828, 1080, 1200, 1440, 1600, 1920, 2048, 2560, 3200, 3840,
+    ],
+    imageSizes: [32, 48, 64, 96, 128, 256, 384, 512],
+  },
   serverExternalPackages: ["@electric-sql/pglite"],
   outputFileTracingExcludes: {
     "/*": [

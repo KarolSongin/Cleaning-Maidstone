@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { PublicPhoto } from "@/components/public-photo";
 import { cache } from "react";
 import {
   ArrowUpRight,
@@ -22,6 +23,11 @@ import { ContentBody } from "@/components/content-renderer";
 import { business, faqs } from "@/lib/business";
 import { metadata, businessSchema } from "@/lib/seo";
 import { publicContent } from "@/lib/repository";
+import {
+  carePhotoSizes,
+  heroPhotoSizes,
+  photoQuality,
+} from "@/lib/photo-quality";
 export const dynamic = "force-dynamic";
 const homeContent = cache(() => publicContent("page", "home"));
 export async function generateMetadata() {
@@ -100,11 +106,11 @@ export default async function Home() {
         </div>
         <div className="hero-visual">
           <div className="hero-photo">
-            <Image
+            <PublicPhoto
               src="/images/living-room.webp"
               alt="Sunlit living room with comfortable seating and leafy houseplants"
-              fill
-              sizes="(max-width: 760px) calc(100vw - 74px), (max-width: 1100px) calc(52.5vw - 71px), (max-width: 1440px) calc(52.5vw - 92px), 655px"
+              sizes={heroPhotoSizes("/images/living-room.webp")}
+              mobilePanelSizes="max(calc(100vw - 74px), 360px)"
               loading="eager"
               fetchPriority="high"
             />
@@ -200,6 +206,7 @@ export default async function Home() {
                   alt={service.alt}
                   fill
                   sizes="(max-width:760px) calc(100vw - 50px), (max-width:1280px) calc(50vw - 62px), 578px"
+                  quality={photoQuality}
                 />
                 <span>
                   <CalendarDays size={14} />{" "}
@@ -249,11 +256,11 @@ export default async function Home() {
       <section className="section care-section" aria-labelledby="care-heading">
         <div className="care-story">
           <div className="care-story-photo">
-            <Image
+            <PublicPhoto
               src="/images/home-detail.webp"
               alt="Light-filled dining and living spaces opening onto a garden"
-              fill
-              sizes="(max-width:760px) 100vw, 42vw"
+              sizes={carePhotoSizes}
+              mobilePanelSizes="max(calc(100vw - 50px), 360px)"
             />
           </div>
           <div className="care-story-note">

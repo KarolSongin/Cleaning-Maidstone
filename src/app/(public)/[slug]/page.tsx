@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { PublicPhoto } from "@/components/public-photo";
 import {
   ArrowUpRight,
   Check,
@@ -18,6 +18,7 @@ import { ContentBody } from "@/components/content-renderer";
 import { BookingSection } from "@/components/booking-section";
 import { JsonLd } from "@/components/json-ld";
 import { Button } from "@/components/ui/button";
+import { pagePhotoSizes } from "@/lib/photo-quality";
 import {
   PublicPageHero,
   type PublicPageHeroProps,
@@ -467,11 +468,11 @@ export default async function Page({
               </div>
               <aside className="service-aside">
                 <div className="page-photo">
-                  <Image
-                    src="/images/bathroom.webp"
-                    alt="Clean bathroom with a walk-in shower and tiled floors"
-                    fill
-                    sizes="(max-width:760px) 100vw, 40vw"
+                  <PublicPhoto
+                    src="/images/bathroom-detail.webp"
+                    alt="Bright bathroom with a freestanding bath, basin and leafy plants"
+                    sizes={pagePhotoSizes("/images/bathroom-detail.webp", true)}
+                    mobilePanelSizes="max(calc(100vw - 50px), 350px)"
                   />
                 </div>
                 <div className="service-quick-price">
@@ -503,11 +504,11 @@ export default async function Page({
           {slug === "about-us" && (
             <section className="section two-column" id="our-approach">
               <div className="page-photo">
-                <Image
+                <PublicPhoto
                   src="/images/home-detail.webp"
                   alt="A bright home with dining and living spaces opening onto a garden"
-                  fill
-                  sizes="(max-width:760px) 100vw, 40vw"
+                  sizes={pagePhotoSizes("/images/home-detail.webp")}
+                  mobilePanelSizes="max(calc(100vw - 50px), 370px)"
                 />
               </div>
               <div className="prose">

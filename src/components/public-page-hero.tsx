@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -10,6 +9,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Button } from "./ui/button";
+import { heroPhotoSizes } from "@/lib/photo-quality";
+import { PublicPhoto } from "./public-photo";
 
 type Action = { href: string; label: string };
 export type PublicPageHeroProps = {
@@ -74,11 +75,11 @@ export function PublicPageHero({
       </div>
       <div className="hero-visual">
         <div className="hero-photo">
-          <Image
+          <PublicPhoto
             src={image.src}
             alt={image.alt}
-            fill
-            sizes="(max-width: 760px) calc(100vw - 74px), (max-width: 1100px) calc(52.5vw - 71px), (max-width: 1440px) calc(52.5vw - 92px), 655px"
+            sizes={heroPhotoSizes(image.src)}
+            mobilePanelSizes="max(calc(100vw - 74px), 360px)"
             loading="eager"
             fetchPriority="high"
             unoptimized={image.unoptimized}
