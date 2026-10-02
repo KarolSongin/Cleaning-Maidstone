@@ -1,0 +1,471 @@
+/* Operational modules have a separate, denser layout. */
+.ops-layout {
+  min-height: 100vh;
+  background: #f4f6f5;
+  display: grid;
+  grid-template-columns: 225px minmax(0, 1fr);
+}
+.ops-sidebar {
+  background: #173c50;
+  color: #eaf0f2;
+  padding: 28px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.ops-logo {
+  font-family: Georgia, serif;
+  font-size: 25px;
+  line-height: 1.1;
+}
+.ops-logo span {
+  display: block;
+  font-family: Arial;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  margin-top: 9px;
+  color: #dbaac0;
+}
+.ops-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ops-sidebar nav a {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-radius: 6px;
+  padding: 12px 8px;
+  font-size: 12px;
+}
+.ops-sidebar nav a:hover {
+  background: #31556a;
+}
+.ops-sidebar form {
+  margin-top: auto;
+}
+.ops-sidebar button {
+  color: white;
+}
+.ops-main {
+  min-width: 0;
+  padding: 28px 35px 65px;
+}
+.ops-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #dfe5e2;
+  padding-bottom: 20px;
+  margin-bottom: 25px;
+}
+.ops-topbar p {
+  margin: 0;
+  font-size: 12px;
+}
+.ops-topbar span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.ops-main h1 {
+  font-family: Arial;
+  font-size: 32px;
+  letter-spacing: -0.035em;
+  margin: 25px 0 9px;
+}
+.ops-main h2 {
+  font-family: Arial;
+  font-size: 22px;
+  letter-spacing: -0.025em;
+}
+.ops-main h3 {
+  font-size: 17px;
+}
+.workspace-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.workspace-heading p {
+  font-size: 12px;
+  margin: 0;
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin: 25px 0;
+}
+.metric-card,
+.panel {
+  background: white;
+  border: 1px solid #dfe5e2;
+  border-radius: 10px;
+  padding: 24px;
+}
+.metric-card span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.metric-card strong {
+  font-weight: 400;
+  font-size: 38px;
+  display: block;
+  line-height: 1.5;
+}
+.ops-columns {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 22px;
+}
+.panel {
+  margin-bottom: 22px;
+  min-width: 0;
+}
+.panel p {
+  font-size: 12px;
+}
+.data-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.data-list li {
+  border-bottom: 1px solid #edf0ed;
+  padding: 15px 0;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.data-list li:last-child {
+  border-bottom: 0;
+}
+.data-list strong {
+  display: block;
+  font-size: 13px;
+}
+.data-list small {
+  display: block;
+  font-size: 11px;
+}
+.badge {
+  display: inline-flex;
+  font-size: 10px;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: #e8efec;
+  color: #37614f;
+}
+.badge-pending {
+  background: #f5e9d0;
+  color: #795b24;
+}
+.badge-cancelled,
+.badge-failed {
+  background: #f9e1e6;
+  color: #9b3c52;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+th {
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 11px;
+}
+td {
+  padding: 14px 11px;
+  border-bottom: 1px solid #e9eeeb;
+  vertical-align: top;
+}
+td small {
+  display: block;
+}
+.ops-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.ops-form .form-grid {
+  gap: 15px;
+}
+.ops-form .button {
+  align-self: flex-start;
+}
+.ops-form textarea {
+  min-height: 85px;
+}
+.alert {
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin: 12px 0;
+  background: #e3f0e8;
+  color: #2d6447;
+}
+.alert-error {
+  background: #f9e5e8;
+  color: #9a334d;
+}
+.search-row {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.search-row input {
+  max-width: 350px;
+  margin: 0;
+}
+.empty-state {
+  padding: 28px;
+  color: var(--muted);
+  font-size: 13px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.calendar-wrap {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid #dfe5e2;
+  margin-bottom: 24px;
+  --fc-border-color: #e3e9e5;
+  --fc-button-bg-color: #173c50;
+  --fc-button-border-color: #173c50;
+  --fc-button-active-bg-color: #315b70;
+  --fc-button-hover-bg-color: #315b70;
+  --fc-today-bg-color: #f5e6ec;
+  --fc-event-bg-color: #366a7a;
+  --fc-event-border-color: #366a7a;
+}
+.fc .fc-toolbar-title {
+  font-size: 19px;
+}
+.fc .fc-button {
+  font-size: 11px;
+}
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number {
+  font-size: 11px;
+}
+.editor-toolbar {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+.editor-toolbar button {
+  border: 1px solid #dce2de;
+  background: #fff;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+.tiptap {
+  min-height: 200px;
+  padding: 16px;
+  border: 1px solid #d7dcda;
+  border-radius: 5px;
+  background: #fafaf7;
+  outline: none;
+}
+.tiptap p {
+  color: var(--ink);
+}
+.tiptap h2 {
+  font-family: Georgia;
+}
+.tiptap ul {
+  list-style: disc;
+  padding-left: 20px;
+}
+.preview-link {
+  font-size: 11px;
+  text-decoration: underline;
+}
+.cleaner-container {
+  max-width: 700px;
+  margin: auto;
+}
+.job-card {
+  background: white;
+  border: 1px solid #dfe5e2;
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 18px;
+}
+.job-card h2 {
+  margin-top: 16px;
+}
+.job-card .job-time {
+  color: var(--navy);
+  font-size: 19px;
+}
+.job-card address {
+  font-style: normal;
+  font-size: 14px;
+}
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 35px;
+  background:
+    radial-gradient(ellipse at top right, #f0dfe5, transparent 65%),
+    var(--paper);
+}
+.login-card {
+  background: white;
+  padding: 40px;
+  border: 1px solid #dbe0dc;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 430px;
+}
+.login-card h1 {
+  font-size: 40px;
+}
+.login-card p {
+  font-size: 13px;
+}
+.login-card .ops-form {
+  margin-top: 25px;
+}
+.login-demo {
+  border-top: 1px solid var(--line);
+  padding-top: 23px;
+  margin-top: 25px;
+}
+.login-demo form {
+  display: inline-block;
+  margin-right: 10px;
+}
+.preview-banner {
+  padding: 16px;
+  background: #fff1cf;
+  color: #6f561c;
+  text-align: center;
+  font-size: 13px;
+}
+@media (max-width: 1100px) {
+  .ops-layout {
+    grid-template-columns: 185px minmax(0, 1fr);
+  }
+  .ops-main {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .ops-columns {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .ops-layout {
+    display: block;
+  }
+  .ops-sidebar {
+    padding: 16px 18px;
+    gap: 13px;
+  }
+  .ops-logo {
+    font-size: 20px;
+  }
+  .ops-sidebar nav {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 3px;
+  }
+  .ops-sidebar nav a {
+    font-size: 10px;
+    padding: 8px;
+    white-space: nowrap;
+  }
+  .ops-sidebar nav svg {
+    width: 14px;
+  }
+  .ops-sidebar form {
+    position: absolute;
+    top: 19px;
+    right: 18px;
+  }
+  .ops-sidebar form button {
+    font-size: 10px;
+    padding: 0;
+  }
+  .ops-main {
+    padding: 20px 18px 45px;
+  }
+  .ops-topbar {
+    margin-bottom: 15px;
+    padding-bottom: 13px;
+  }
+  .metric-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .metric-card {
+    padding: 12px;
+  }
+  .metric-card strong {
+    font-size: 29px;
+  }
+  .metric-card span {
+    font-size: 9px;
+  }
+  .panel {
+    padding: 20px;
+  }
+  .workspace-heading {
+    display: block;
+  }
+  .workspace-heading .button {
+    margin-top: 10px;
+  }
+  .calendar-wrap {
+    padding: 10px;
+    overflow: auto;
+  }
+  .fc .fc-toolbar {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 16px;
+  }
+  .ops-form .form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ops-form .form-grid label {
+    min-width: 0;
+  }
+  .login-card {
+    padding: 30px;
+  }
+  .login-card h1 {
+    font-size: 36px;
+  }
+}
+@media (max-width: 390px) {
+  .ops-form .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
