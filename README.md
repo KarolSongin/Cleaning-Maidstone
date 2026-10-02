@@ -36,7 +36,7 @@ Only one process can use a PGlite database directory at a time. Stop the server 
 - Database constraints reject overlaps, out-of-availability work and approved leave. Recurrence preserves Europe/London wall time through DST. Skipped/repeated local clock times are rejected explicitly.
 - Cleaner portal exposes assigned addresses/instructions only, with list and read-only day/week/month calendar views. Cleaners can open job details and mark their own work started/completed, but cannot create, move, resize, reassign or cancel visits. Availability/leave requests persist for admin review.
 - Tiptap articles/landing pages, structured sections, image uploads, SEO fields, authors/categories/dates, drafts, authenticated preview, publishing and unpublishing. Public content is refreshed on publishing mutations; drafts return 404 for public requests. The `home` page adds editable editorial content after the fixed homepage sections, before the enquiry form.
-- Lazy 3D room with ordinary HTML task controls, static/reduced-motion fallback and on-demand rendering.
+- Public pages share the homepage’s split photo hero, rounded blue panel, italic accent headings and pink enquiry buttons. The room explorer is removed; its component files remain available for a future 3D decision.
 - Local sample call events, caller-match suggestion, manual association, admin notes, follow-ups and distinct unavailable/failed recording/transcript states. Repeated events do not duplicate conversations or transcript stages.
 
 ## Connect Supabase
@@ -72,7 +72,7 @@ npm run build
 npm run test:e2e
 ```
 
-Focused PostgreSQL tests cover RLS/grants, public/private storage policies, own-job projections, role escalation, transitions, enquiries/throttling, publishing, DST, overlaps, leave conflicts, retry correlation and durable transcript stages. Playwright covers desktop/mobile rendered HTML, metadata, keyboard navigation, enquiry/customer persistence, simultaneous assignment requests, route/API separation, publishing/unpublishing, recording access, sample calls and reduced-motion controls.
+Focused PostgreSQL tests cover RLS/grants, public/private storage policies, own-job projections, role escalation, transitions, enquiries/throttling, publishing, DST, overlaps, leave conflicts, retry correlation and durable transcript stages. Playwright covers desktop/mobile rendered HTML, metadata, keyboard navigation, enquiry/customer persistence, simultaneous assignment requests, route/API separation, publishing/unpublishing, recording access, sample calls, public hero links and article images/long headings.
 
 See [verification.md](docs/verification.md) for measured outcomes and limits. Live Supabase Auth/Realtime/Storage and Twilio/AssemblyAI end-to-end behaviour remain unverified until credentials and provider configuration are supplied. No deployment or domain/data migration has been performed.
 

@@ -1037,29 +1037,18 @@
 .public-site .footer-bottom nav {
   gap: 20px;
 }
-.public-site .page-intro {
-  max-width: 1280px;
-  width: calc(100% - 48px);
-  margin: 22px auto 45px;
-  padding: 60px 52px;
-  background: #eff5f9;
-  border-radius: 27px;
+.public-site .page-hero {
+  margin-bottom: 82px;
 }
-.public-site .page-intro h1 {
-  font-size: clamp(40px, 4.7vw, 64px);
-  max-width: 850px;
-  margin: 0 auto 25px;
+.public-site .hero.page-hero h1 {
+  font-size: clamp(42px, 4.25vw, 62px);
+  overflow-wrap: anywhere;
 }
-.public-site .page-intro > p:not(.eyebrow) {
-  max-width: 730px;
-  font-size: 16px;
+.public-site .page-hero .hero-description {
+  max-width: 500px;
 }
-.public-site .breadcrumb {
-  font-size: 10px;
-  margin-bottom: 25px;
-}
-.public-site .page-intro .eyebrow {
-  margin-bottom: 17px;
+.public-site .page-hero .hero-photo img {
+  object-position: center;
 }
 .public-site .two-column {
   gap: 72px;
@@ -1186,14 +1175,20 @@
 .public-site .blog-card p {
   font-size: 14px;
 }
-.public-site .article-page h1 {
-  font-size: 51px;
+.public-site .article-page {
+  padding-top: 0;
 }
-.public-site .article-excerpt {
-  font-size: 19px;
+.public-site #article,
+.public-site #page-content,
+.public-site #cleaning-details,
+.public-site #our-approach,
+.public-site #cleaning-prices,
+.public-site #privacy-details,
+.public-site #journal-articles {
+  scroll-margin-top: 130px;
 }
-.public-site .article-author {
-  font-size: 12px;
+.public-site .journal-section {
+  padding-top: 0;
 }
 .public-site .service-detail-card {
   padding: 30px;
@@ -1871,17 +1866,11 @@
     margin: 2px 0 0;
     gap: 22px;
   }
-  .public-site .page-intro {
-    width: calc(100% - 28px);
-    padding: 38px 23px;
-    margin: 14px auto 35px;
-    border-radius: 20px;
+  .public-site .page-hero {
+    margin-bottom: 48px;
   }
-  .public-site .page-intro h1 {
-    font-size: 38px;
-  }
-  .public-site .page-intro > p:not(.eyebrow) {
-    font-size: 13px;
+  .public-site .hero.page-hero h1 {
+    font-size: clamp(38px, 10.7vw, 53px);
   }
   .public-site .two-column {
     grid-template-columns: 1fr;
@@ -1921,12 +1910,6 @@
   .public-site .blog-grid {
     padding-top: 0;
     grid-template-columns: 1fr;
-  }
-  .public-site .article-page h1 {
-    font-size: 37px;
-  }
-  .public-site .article-excerpt {
-    font-size: 17px;
   }
   .public-site .contact-options {
     grid-template-columns: 1fr;

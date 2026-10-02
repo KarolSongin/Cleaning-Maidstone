@@ -50,5 +50,7 @@
     }
   },
   "runtime_error": null,
-  "warnings": []
+  "warnings": [],
+  "source_commit": "137de3609c522e2bd65255dca2e2794db8433691",
+  "benchmark_note": "Measured before room explorer removal and the shared public-page hero update; not a new audit of the latest commit."
 }

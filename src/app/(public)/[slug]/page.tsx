@@ -1,7 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, Check, Phone, Mail, Clock } from "lucide-react";
+import {
+  ArrowUpRight,
+  Check,
+  Phone,
+  Mail,
+  Clock,
+  CalendarDays,
+  HeartHandshake,
+  LockKeyhole,
+} from "lucide-react";
 import { metadata, breadcrumbs } from "@/lib/seo";
 import { business, serviceTasks } from "@/lib/business";
 import { publicContent } from "@/lib/repository";
@@ -9,6 +18,160 @@ import { ContentBody } from "@/components/content-renderer";
 import { BookingSection } from "@/components/booking-section";
 import { JsonLd } from "@/components/json-ld";
 import { Button } from "@/components/ui/button";
+import {
+  PublicPageHero,
+  type PublicPageHeroProps,
+} from "@/components/public-page-hero";
+
+const kitchenImage = {
+  src: "/images/kitchen-detail.webp",
+  alt: "Bright kitchen with clean worktops and wooden stools",
+};
+const livingImage = {
+  src: "/images/living-room.webp",
+  alt: "Sunlit living room with comfortable seating and leafy houseplants",
+};
+const homeImage = {
+  src: "/images/home-detail.webp",
+  alt: "A bright home with dining and living spaces opening onto a garden",
+};
+const pageHeroes: Record<string, Omit<PublicPageHeroProps, "description">> = {
+  "maidstone-domestic-cleaning": {
+    eyebrow: "A regular clean. A little more living.",
+    heading: (
+      <>
+        Regular domestic cleaning <br />
+        <em>in Maidstone.</em>
+      </>
+    ),
+    tagline: "Your rooms. Your priorities. Your routine.",
+    image: kitchenImage,
+    primaryAction: { href: "#book", label: "Find your regular cleaner" },
+    secondaryAction: { href: "#cleaning-details", label: "What’s included" },
+    note: "Weekly or fortnightly · 3-hour minimum",
+    detail: {
+      title: "The details that matter.",
+      text: "Cleaning priorities agreed with you first.",
+      icon: <Check size={25} />,
+    },
+    caption: "Local care for Maidstone homes",
+    stamp: (
+      <>
+        Your home.
+        <br />
+        Your way.
+      </>
+    ),
+  },
+  "about-us": {
+    eyebrow: "Thoughtful cleaning. Familiar people.",
+    heading: (
+      <>
+        Local Maidstone cleaners. <br />
+        <em>A personal approach.</em>
+      </>
+    ),
+    tagline: "A local business. A home that feels understood.",
+    image: livingImage,
+    primaryAction: { href: "#book", label: "Tell us about your home" },
+    secondaryAction: { href: "#our-approach", label: "Get to know us" },
+    note: "Serving Maidstone & surrounding neighbourhoods",
+    detail: {
+      title: "A familiar face.",
+      text: "The same regular cleaner, wherever possible.",
+      icon: <HeartHandshake size={25} />,
+    },
+    caption: "A local service. A personal touch.",
+    stamp: (
+      <>
+        Close to home.
+        <br />
+        Here to help.
+      </>
+    ),
+  },
+  pricing: {
+    eyebrow: "Clear prices. Useful routines.",
+    heading: (
+      <>
+        Domestic cleaning prices <br />
+        <em>in Maidstone.</em>
+      </>
+    ),
+    tagline: "A little help, with everything agreed first.",
+    image: homeImage,
+    primaryAction: {
+      href: "#cleaning-prices",
+      label: "Compare cleaning prices",
+    },
+    secondaryAction: { href: "#book", label: "Check availability" },
+    note: "From £18 per hour · 3-hour minimum",
+    detail: {
+      title: "Your choice of products.",
+      text: "Use your own, or ask us to bring them.",
+      icon: <Check size={25} />,
+    },
+    caption: "Weekly & fortnightly home cleaning",
+    stamp: (
+      <>
+        Clear rates.
+        <br />
+        No guesswork.
+      </>
+    ),
+  },
+  "contact-us": {
+    eyebrow: "Your first step towards a cleaner home",
+    heading: (
+      <>
+        Contact Cleaning <br />
+        <em>Maidstone.</em>
+      </>
+    ),
+    tagline: "Let’s talk about your home.",
+    image: livingImage,
+    primaryAction: { href: "#book", label: "Ask about availability" },
+    secondaryAction: { href: "tel:" + business.tel, label: "Give us a call" },
+    note: business.hours,
+    detail: {
+      title: business.phone,
+      text: "A conversation about the help you need.",
+      icon: <Phone size={25} />,
+    },
+    caption: "Local people. A personal approach.",
+    stamp: (
+      <>
+        Less housework.
+        <br />
+        More home.
+      </>
+    ),
+  },
+  privacy: {
+    eyebrow: "The details you share with us",
+    heading: (
+      <>
+        Your information, <br />
+        <em>handled with care.</em>
+      </>
+    ),
+    image: homeImage,
+    primaryAction: {
+      href: "#privacy-details",
+      label: "Read our privacy notice",
+    },
+    secondaryAction: {
+      href: "mailto:" + business.email,
+      label: "Ask us a question",
+    },
+    detail: {
+      title: "Here to answer your questions.",
+      text: "Contact us about the information you share.",
+      icon: <LockKeyhole size={25} />,
+    },
+    caption: "Cleaning Maidstone",
+  },
+};
 const pages: Record<
   string,
   { title: string; description: string; heading: string; intro: string }
@@ -83,6 +246,29 @@ export default async function Page({
   const page = pages[slug];
   if (!content && !page) notFound();
   const title = content?.title || page.heading;
+  const hero = pageHeroes[slug] || {
+    eyebrow: "Cleaning Maidstone · Close to home",
+    heading: title,
+    image: livingImage,
+    primaryAction: { href: "#book", label: "Check cleaning availability" },
+    secondaryAction: {
+      href: "/maidstone-domestic-cleaning/",
+      label: "Our regular cleaning",
+    },
+    detail: {
+      title: "A routine that fits.",
+      text: "Weekly or fortnightly domestic cleaning.",
+      icon: <CalendarDays size={25} />,
+    },
+    caption: "Local care for Maidstone homes",
+    stamp: (
+      <>
+        Less housework.
+        <br />
+        More living.
+      </>
+    ),
+  };
   return (
     <main id="main">
       <JsonLd data={breadcrumbs(title, "/" + slug + "/")} />
@@ -101,27 +287,47 @@ export default async function Page({
           }}
         />
       )}
-      <section className="page-intro section">
-        <Link href="/" className="breadcrumb">
-          Home / {content?.title || slug.replaceAll("-", " ")}
-        </Link>
-        <p className="eyebrow">Cleaning Maidstone</p>
-        <h1>{title}</h1>
-        <p>{content?.excerpt || page.intro}</p>
-      </section>
+      <PublicPageHero
+        {...hero}
+        heading={content ? title : hero.heading}
+        description={
+          content?.excerpt ||
+          page?.intro ||
+          "Find a regular domestic cleaner for your Maidstone home. We agree the time, price and priorities with you before the first visit."
+        }
+        image={
+          content?.image_path
+            ? {
+                src: content.image_path,
+                alt: content.image_alt,
+                unoptimized: true,
+              }
+            : hero.image
+        }
+        primaryAction={
+          content
+            ? { href: "#page-content", label: "Read more" }
+            : hero.primaryAction
+        }
+        secondaryAction={
+          content && slug !== "privacy"
+            ? { href: "#book", label: "Check availability" }
+            : hero.secondaryAction
+        }
+      />
       {content ? (
-        <section className="section narrow">
-          <ContentBody content={content} />
+        <section className="section narrow" id="page-content">
+          <ContentBody content={content} showImage={false} />
         </section>
       ) : (
         <>
           {slug === "pricing" && (
-            <section className="section pricing-table">
+            <section className="section pricing-table" id="cleaning-prices">
               <div className="section-heading">
                 <h2>
                   A routine that fits
                   <br />
-                  your home.
+                  <em>your home.</em>
                 </h2>
                 <p>
                   Normal travel within the confirmed service area and agreed
@@ -180,7 +386,7 @@ export default async function Page({
             </section>
           )}
           {slug === "maidstone-domestic-cleaning" && (
-            <section className="section two-column">
+            <section className="section two-column" id="cleaning-details">
               <div className="prose">
                 <h2>What our regular domestic cleaners can take care of</h2>
                 <p>
@@ -295,7 +501,7 @@ export default async function Page({
             </section>
           )}
           {slug === "about-us" && (
-            <section className="section two-column">
+            <section className="section two-column" id="our-approach">
               <div className="page-photo">
                 <Image
                   src="/images/home-detail.webp"
@@ -379,7 +585,7 @@ export default async function Page({
             </section>
           )}
           {slug === "privacy" && (
-            <section className="section narrow prose">
+            <section className="section narrow prose" id="privacy-details">
               <h2>Enquiries and service records</h2>
               <p>
                 We use your name, contact details, postcode and preferences to

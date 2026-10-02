@@ -69,6 +69,7 @@ test("public service, pricing and contact pages retain useful local information"
     ["/about-us/", "Local Maidstone cleaners"],
     ["/contact-us/", "Contact Cleaning Maidstone"],
     ["/blog/", "Practical advice"],
+    ["/privacy/", "Your information, handled with care"],
   ]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
@@ -79,6 +80,13 @@ test("public service, pricing and contact pages retain useful local information"
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    const action = page.locator(".page-hero .hero-actions .button");
+    const target = await action.getAttribute("href");
+    expect(target?.startsWith("#")).toBe(true);
+    await action.click();
+    await expect(
+      page.locator(target!).getByRole("heading", { level: 2 }).first(),
+    ).toBeInViewport();
   }
   await page.goto("/pricing/");
   for (const price of ["£18", "£22", "£19", "£23"])
@@ -313,6 +321,42 @@ test("publishing and unpublishing refresh the article and sitemap", async ({
   );
   const data = await (await page.request.get("/api/operations/")).json();
   const content = data.content.find((c: { slug: string }) => c.slug === slug);
+  const articleTitle =
+    "A practical guide to preparing your Maidstone home for its first regular domestic clean";
+  const updated = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "content",
+      data: {
+        ...content,
+        title: articleTitle,
+        image_path: "/images/kitchen-detail.webp",
+        image_alt: "Kitchen illustration for a synthetic publishing check",
+        published_at: content.published_at || "",
+      },
+    },
+  });
+  expect(updated.status()).toBe(200);
+  await page.goto("/blog/" + slug + "/");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    articleTitle,
+  );
+  await expect(
+    page.getByAltText("Kitchen illustration for a synthetic publishing check"),
+  ).toHaveCount(1);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByRole("link", { name: "Read the article", exact: true })
+    .click();
+  await expect(
+    page.getByText("This article was created during a local browser test.", {
+      exact: true,
+    }),
+  ).toBeInViewport();
   await page.request.post("/api/operations/", {
     headers: { origin },
     data: {
@@ -426,22 +470,4 @@ test("sample events deduplicate and expose transcription failure honestly", asyn
       (c: { provider: string }) => c.provider === "sample",
     ).status,
   ).toBe("completed");
-});
-
-test("room controls remain accessible with reduced motion", async ({
-  page,
-}) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
-  await expect(
-    page.getByRole("button", { name: "Explore the room" }),
-  ).toBeDisabled();
-  await page.getByRole("button", { name: "02 Floors", exact: true }).click();
-  await expect(
-    page.getByText(
-      "Vacuum rugs and carpets, then mop suitable hard floors using your equipment.",
-      { exact: true },
-    ),
-  ).toBeVisible();
-  await expect(page.locator("canvas")).toHaveCount(0);
 });

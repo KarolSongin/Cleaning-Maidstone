@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookingSection } from "@/components/booking-section";
-import { RoomExperience } from "@/components/room-experience";
 import { JsonLd } from "@/components/json-ld";
 import { ContentBody } from "@/components/content-renderer";
 import { business, faqs } from "@/lib/business";
@@ -417,7 +416,6 @@ export default async function Home() {
           </Link>
         </div>
       </section>
-      <RoomExperience />
       <section className="section faq-section">
         <div>
           <p className="eyebrow">Good to know before you enquire</p>

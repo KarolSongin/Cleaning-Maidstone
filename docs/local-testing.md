@@ -57,7 +57,7 @@ Keep that terminal running. On your own computer, open `http://127.0.0.1:3000` i
 
 ## 6. Try the application
 
-- Browse the homepage, service page, About, Pricing, Contact and Journal. In browser developer tools, check a narrow/mobile viewport. Click “Explore the room” to activate 3D; its static illustration and HTML task controls remain available if WebGL is unavailable.
+- Browse the homepage, service page, About, Pricing, Contact and Journal. In browser developer tools, check a narrow/mobile viewport. Check the matching photo heroes and their links to page details or the enquiry form. The room explorer is removed from the homepage.
 - Submit an enquiry using made-up contact details. It persists locally and does not contact the business or confirm a booking.
 - Open `http://127.0.0.1:3000/login/` and click **Admin demo**. No password is needed for the demo button. Review enquiries/customers, calendar day/week/month views, assignments, availability/leave, content editor and conversations.
 - Try creating a customer and visit, moving an occurrence and publishing a draft article. Use the explicitly labelled sample-call action to populate synthetic conversation events; there are no real calls or playable sample audio.
@@ -94,7 +94,7 @@ $env:CHROMIUM_PATH = node -p "require('@playwright/test').chromium.executablePat
 npm run test:e2e
 ```
 
-The production build from step 5 is required. Browser tests start their own server on port 3001 and use a separate fresh database. On Linux, install Chromium system dependencies if Playwright reports missing libraries. The verified cloud results were 21 focused tests and 20 browser journeys; see [verification.md](verification.md).
+The production build from step 5 is required. Browser tests start their own server on port 3001 and use a separate fresh database. On Linux, install Chromium system dependencies if Playwright reports missing libraries. The verified cloud results were 21 focused tests and 18 browser journeys; see [verification.md](verification.md).
 
 ## Make changes later
 

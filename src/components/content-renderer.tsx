@@ -56,10 +56,16 @@ function render(node: Node, key: number | string, depth = 0): ReactNode {
       return <span key={key}>{children}</span>;
   }
 }
-export function ContentBody({ content }: { content: Content }) {
+export function ContentBody({
+  content,
+  showImage = true,
+}: {
+  content: Content;
+  showImage?: boolean;
+}) {
   return (
     <div className="prose">
-      {content.image_path && (
+      {showImage && content.image_path && (
         <Image
           src={content.image_path}
           alt={content.image_alt}
