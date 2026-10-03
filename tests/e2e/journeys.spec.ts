@@ -1043,11 +1043,9 @@ test("booking rates balance, recur independently and expose only cleaner cash pa
   expect(customerResponse.status()).toBe(200);
   const customerId = (await customerResponse.json()).id;
   await page.goto("/admin/calendar/");
-  const form = page
-    .locator("form")
-    .filter({
-      has: page.getByRole("button", { name: "Create booking", exact: true }),
-    });
+  const form = page.locator("form").filter({
+    has: page.getByRole("button", { name: "Create booking", exact: true }),
+  });
   await form
     .getByRole("combobox", { name: "Customer", exact: true })
     .selectOption(customerId);
@@ -1251,5 +1249,300 @@ test("booking rates balance, recur independently and expose only cleaner cash pa
     },
   });
   expect(denied.status()).toBe(403);
+  expect(errors).toEqual([]);
+});
+
+test("admin finances reconcile earnings, forecasts, filters and a full CSV export", async ({
+  page,
+}) => {
+  test.setTimeout(90000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const project = test.info().project.name;
+  const { Temporal } = await import("@js-temporal/polyfill");
+  const today = Temporal.Now.plainDateISO("Europe/London");
+  await page.goto("/admin/finances/");
+  await expect(page).toHaveURL(/\/login\/$/);
+  await login(page, "admin");
+  const createCustomer = async (name: string) => {
+    const response = await page.request.post("/api/operations/", {
+      headers: { origin },
+      data: {
+        action: "customer",
+        data: {
+          name,
+          email: "finance-report@example.test",
+          phone: "+447700900777",
+          address: "11 Synthetic Report Lane",
+          postcode: "ME14 1AA",
+        },
+      },
+    });
+    expect(response.status()).toBe(200);
+    return (await response.json()).id as string;
+  };
+  const nameA = `Report ${project} A`,
+    nameB = `Report ${project} B`;
+  const customerA = await createCustomer(nameA),
+    customerB = await createCustomer(nameB);
+  const jamie = "22222222-2222-4222-8222-222222222222",
+    taylor = "33333333-3333-4333-8333-333333333333";
+  const booking = async (
+    date: string,
+    minutes: number,
+    customer_id = customerA,
+    cleaner_id = jamie,
+    extra = {},
+  ) => {
+    const response = await page.request.post("/api/operations/", {
+      headers: { origin },
+      data: {
+        action: "booking",
+        data: {
+          customer_id,
+          cleaner_id,
+          date,
+          time: project === "desktop" ? "16:00" : "18:00",
+          duration_minutes: minutes,
+          interval_weeks: 0,
+          occurrences: 1,
+          customer_rate_pence: 1800,
+          admin_rate_pence: 300,
+          cleaner_rate_pence: 1500,
+          ...extra,
+        },
+      },
+    });
+    expect(response.status()).toBe(200);
+    return (await response.json()).id as string;
+  };
+  const completedDate = today.subtract({ days: 14 }).toString(),
+    pastDate = today.subtract({ days: 7 }).toString(),
+    futureDate = today.add({ days: 10 }).toString();
+  const completedId = await booking(completedDate, 90);
+  await booking(pastDate, 60);
+  const futureId = await booking(futureDate, 180, customerA, jamie, {
+    time: project === "desktop" ? "13:00" : "16:00",
+  });
+  const cancelledId = await booking(today.add({ days: 11 }).toString(), 120);
+  await booking(today.add({ days: 12 }).toString(), 120, customerB, jamie, {
+    customer_rate_pence: 2000,
+    admin_rate_pence: 400,
+    cleaner_rate_pence: 1600,
+  });
+  const seriesId = await booking("2036-01-07", 60, customerA, taylor, {
+    interval_weeks: 1,
+    occurrences: 52,
+    duration_weeks: 52,
+  });
+  const dashboard = await (await page.request.get("/api/operations/")).json();
+  const first = dashboard.visits
+    .filter((visit: { series_id: string }) => visit.series_id === seriesId)
+    .sort((a: { starts_at: string }, b: { starts_at: string }) =>
+      a.starts_at.localeCompare(b.starts_at),
+    )[0];
+  for (const [action, data] of [
+    ["visit", { id: cancelledId, status: "cancelled" }],
+    [
+      "visit_finances",
+      {
+        id: first.id,
+        customer_rate_pence: 2200,
+        admin_rate_pence: 500,
+        cleaner_rate_pence: 1700,
+      },
+    ],
+  ]) {
+    const response = await page.request.post("/api/operations/", {
+      headers: { origin },
+      data: { action, data },
+    });
+    expect(response.status()).toBe(200);
+  }
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await login(page, "cleaner");
+  for (const status of ["started", "completed"]) {
+    const response = await page.request.post("/api/operations/", {
+      headers: { origin },
+      data: { action: "transition", data: { id: completedId, status } },
+    });
+    expect(response.status()).toBe(200);
+  }
+  const forbidden = await page.request.get("/admin/finances/", {
+    maxRedirects: 0,
+  });
+  expect(forbidden.status()).toBe(307);
+  expect(forbidden.headers().location).toContain("/cleaner/");
+  await page.goto("/admin/finances/");
+  await expect(page).toHaveURL(/\/cleaner\/$/);
+  await expect(
+    page.getByRole("link", { name: "Finances", exact: true }),
+  ).toHaveCount(0);
+  const cleanerData = await (await page.request.get("/api/operations/")).json();
+  expect(cleanerData).not.toHaveProperty("visit_finances");
+  expect(JSON.stringify(cleanerData)).not.toContain("admin_rate_pence");
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await login(page, "admin");
+  await page.getByRole("link", { name: "Finances", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/finances\/$/);
+  await expect(
+    page.getByRole("heading", { name: "Choose your view", exact: true }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+  const filters = page.getByLabel("Finance filters", { exact: true });
+  const selectCustomer = filters.getByRole("combobox", {
+      name: "Customer",
+      exact: true,
+    }),
+    selectCleaner = filters.getByRole("combobox", {
+      name: "Cleaner",
+      exact: true,
+    });
+  await selectCustomer.selectOption(customerA);
+  const metric = (name: string) =>
+    page.getByLabel(name, { exact: true }).locator(":scope > strong");
+  await expect(metric("Earned admin share")).toHaveText("£4.50");
+  await expect(metric("Booked admin forecast")).toHaveText("£167.00");
+  await expect(metric("Awaiting completion")).toHaveText("£3.00");
+  await expect(metric("Total admin value")).toHaveText("£174.50");
+  await expect(page.getByLabel("Income split", { exact: true })).toContainText(
+    "1 cancelled visit excluded",
+  );
+  const ledger = page.getByLabel("Financial visit list", { exact: true });
+  await expect(
+    ledger.getByText("1–25 of 56 visits", { exact: true }),
+  ).toBeVisible();
+  await ledger
+    .getByRole("button", { name: "Next visits", exact: true })
+    .click();
+  await expect(
+    ledger.getByText("26–50 of 56 visits", { exact: true }),
+  ).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await ledger.getByRole("button", { name: "Export CSV", exact: true }).click();
+  const download = await downloadPromise;
+  const fs = await import("node:fs/promises");
+  const csv = await fs.readFile((await download.path())!, "utf8");
+  expect(csv.split("\r\n")).toHaveLength(57);
+  expect(csv).toContain(completedId);
+  expect(csv).toContain(first.id);
+  expect(csv).toContain('"22.00","5.00","17.00","22.00","5.00","17.00","Yes"');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `test-results/finance-report-${project}.png`,
+    fullPage: true,
+  });
+  await selectCleaner.selectOption(jamie);
+  await expect(metric("Booked admin forecast")).toHaveText("£9.00");
+  await expect(metric("Total admin value")).toHaveText("£16.50");
+  await selectCustomer.selectOption(customerB);
+  await expect(metric("Earned admin share")).toHaveText("£0.00");
+  await expect(metric("Booked admin forecast")).toHaveText("£8.00");
+  await selectCustomer.selectOption(customerA);
+  await selectCleaner.selectOption("");
+  await page.getByRole("button", { name: "By cleaner", exact: true }).click();
+  await page
+    .getByLabel("Cleaner finance breakdown", { exact: true })
+    .getByRole("button", { name: "Taylor Reed", exact: true })
+    .click();
+  await expect(selectCleaner).toHaveValue(taylor);
+  await expect(metric("Booked admin forecast")).toHaveText("£158.00");
+  await page.getByRole("button", { name: /^Jan 2036: earned/ }).click();
+  await expect(filters.getByLabel("From date", { exact: true })).toHaveValue(
+    "2036-01-01",
+  );
+  await expect(filters.getByLabel("To date", { exact: true })).toHaveValue(
+    "2036-01-31",
+  );
+  await expect(metric("Booked admin forecast")).toHaveText("£14.00");
+  await filters
+    .getByRole("combobox", { name: "Date range", exact: true })
+    .selectOption("this-month");
+  await expect(filters.getByLabel("From date", { exact: true })).toHaveValue(
+    today.with({ day: 1 }).toString(),
+  );
+  await expect(metric("Booked admin forecast")).toHaveText("£0.00");
+  await filters
+    .getByRole("combobox", { name: "Date range", exact: true })
+    .selectOption("all");
+  await selectCleaner.selectOption(jamie);
+  await filters.getByLabel("From date", { exact: true }).fill(completedDate);
+  await filters.getByLabel("To date", { exact: true }).fill(completedDate);
+  await expect(metric("Earned admin share")).toHaveText("£4.50");
+  await expect(metric("Booked admin forecast")).toHaveText("£0.00");
+  await filters.getByLabel("From date", { exact: true }).fill(futureDate);
+  await expect(
+    page.locator(".admin-finances").getByRole("alert"),
+  ).toContainText("end date must be on or after");
+  await expect(metric("Total admin value")).toHaveCount(0);
+  await filters.getByLabel("To date", { exact: true }).fill(futureDate);
+  await expect(metric("Booked admin forecast")).toHaveText("£9.00");
+  await ledger
+    .getByRole("combobox", { name: "Show visits", exact: true })
+    .selectOption("all");
+  await page
+    .locator(`tr[data-visit-id="${futureId}"]`)
+    .getByRole("button", { name: /^Edit rates/ })
+    .click();
+  const editor = page.getByLabel("Edit financial visit", { exact: true });
+  await editor
+    .getByLabel("Customer hourly rate (£)", { exact: true })
+    .fill("20");
+  await editor.getByLabel("Admin hourly share (£)", { exact: true }).fill("4");
+  await editor
+    .getByLabel("Cleaner hourly cash pay (£)", { exact: true })
+    .fill("16");
+  await editor
+    .getByRole("button", { name: "Save visit rates", exact: true })
+    .click();
+  await expect(metric("Booked admin forecast")).toHaveText("£12.00");
+  const cancel = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: { action: "visit", data: { id: futureId, status: "cancelled" } },
+  });
+  expect(cancel.status()).toBe(200);
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(metric("Booked admin forecast")).toHaveText("£0.00");
+  await expect(page.locator(`tr[data-visit-id="${futureId}"]`)).toContainText(
+    "Cancelled",
+  );
+  await filters
+    .getByRole("button", { name: "Reset filters", exact: true })
+    .click();
+  const fresh = await (await page.request.get("/api/operations/")).json();
+  const unpriced = fresh.visits.find(
+    (visit: { id: string; status: string }) =>
+      visit.status !== "cancelled" &&
+      !fresh.visit_finances.some(
+        (rates: { id: string }) => rates.id === visit.id,
+      ),
+  );
+  expect(unpriced).toBeTruthy();
+  await page
+    .getByRole("button", { name: "Review missing rates", exact: true })
+    .click();
+  await expect(
+    ledger.getByRole("combobox", { name: "Show visits", exact: true }),
+  ).toHaveValue("unpriced");
+  await page
+    .locator(`tr[data-visit-id="${unpriced.id}"]`)
+    .getByRole("button", { name: /^Set rates/ })
+    .click();
+  await expect(
+    editor.getByLabel("Customer hourly rate (£)", { exact: true }),
+  ).toHaveValue("");
+  await editor
+    .getByRole("button", { name: "Close rate editor", exact: true })
+    .click();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
   expect(errors).toEqual([]);
 });

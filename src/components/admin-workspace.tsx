@@ -21,6 +21,7 @@ import {
 } from "./weekly-availability";
 import { cleanerInviteSchema } from "@/lib/validation";
 import { VisitFinances } from "./booking-rates";
+import { AdminFinances } from "./admin-finances";
 import { BookingForm } from "./booking-form";
 import { RecurringBookings } from "./recurring-bookings";
 import { recurringSummaries, londonToday } from "@/lib/recurring-bookings";
@@ -37,6 +38,7 @@ const names: Record<string, string> = {
   customers: "People & their homes.",
   calendar: "A well-organised week.",
   recurring: "Recurring bookings.",
+  finances: "Your finances, in focus.",
   cleaners: "The people behind the care.",
   conversations: "Every conversation, together.",
   content: "Words that feel like you.",
@@ -64,14 +66,17 @@ export function AdminWorkspace({
   section,
   demo,
   initialToday,
+  initialNow,
 }: {
   initialData: DashboardData;
   section: string;
   demo: boolean;
   initialToday: string;
+  initialNow: string;
 }) {
   const [data, setData] = useState(initialData);
   const [today, setToday] = useState(initialToday);
+  const [asOf, setAsOf] = useState(initialNow);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [selectedCustomer, setCustomer] = useState<Customer | undefined>();
@@ -94,6 +99,7 @@ export function AdminWorkspace({
     if (!r.ok) throw new Error("Could not refresh the workspace");
     setData(await r.json());
     setToday(londonToday());
+    setAsOf(new Date().toISOString());
   }, []);
   useLiveWorkspace(!demo, refresh);
   const run = async (action: string, value: unknown) => {
@@ -133,7 +139,9 @@ export function AdminWorkspace({
               ? "Day, week and month views. All times are Europe/London."
               : section === "recurring"
                 ? "Start dates, end dates and follow-ups for your regular customers."
-                : "A clear place to look after the details."}
+                : section === "finances"
+                  ? "Earned income, booked work and the value of every visit."
+                  : "A clear place to look after the details."}
           </p>
         </div>
         <Button
@@ -243,6 +251,14 @@ export function AdminWorkspace({
             </section>
           </div>
         </>
+      )}
+      {section === "finances" && (
+        <AdminFinances
+          data={data}
+          today={today}
+          asOf={asOf}
+          onSaved={refresh}
+        />
       )}
       {section === "recurring" && (
         <RecurringBookings data={data} today={today} onSaved={refresh} />

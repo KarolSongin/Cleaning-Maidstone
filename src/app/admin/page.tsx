@@ -9,6 +9,7 @@ export default async function Admin() {
       initialData={await dashboard(actor)}
       section="overview"
       demo={actor.demo}
+      initialNow={new Date().toISOString()}
       initialToday={londonToday()}
     />
   );

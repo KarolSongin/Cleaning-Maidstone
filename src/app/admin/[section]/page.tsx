@@ -15,6 +15,7 @@ export default async function AdminSection({
       "customers",
       "calendar",
       "recurring",
+      "finances",
       "cleaners",
       "content",
       "conversations",
@@ -26,6 +27,7 @@ export default async function AdminSection({
       initialData={await dashboard(actor)}
       section={section}
       demo={actor.demo}
+      initialNow={new Date().toISOString()}
       initialToday={londonToday()}
     />
   );

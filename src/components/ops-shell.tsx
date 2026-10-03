@@ -8,6 +8,7 @@ import {
   UserRound,
   ArrowUpRight,
   Repeat2,
+  Banknote,
 } from "lucide-react";
 import type { Actor } from "@/lib/models";
 const links = [
@@ -15,6 +16,7 @@ const links = [
   ["customers", "Customers", Users],
   ["calendar", "Calendar", CalendarDays],
   ["recurring", "Recurring bookings", Repeat2],
+  ["finances", "Finances", Banknote],
   ["cleaners", "Cleaners", UserRound],
   ["conversations", "Conversations", Phone],
   ["content", "Content", FileText],
