@@ -784,6 +784,10 @@ export type Database = {
       enqueue_transcription: { Args: { rid: string }; Returns: undefined };
       ingest_call_event: { Args: { p: Json }; Returns: string };
       is_admin: { Args: Record<string, never>; Returns: boolean };
+      leave_cover_visits: {
+        Args: { request_id: string };
+        Returns: { id: string }[];
+      };
       pipeline_booking_stage: {
         Args: { first_start: string; as_of: string };
         Returns: string;

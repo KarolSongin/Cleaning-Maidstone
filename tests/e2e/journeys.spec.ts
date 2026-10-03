@@ -1849,3 +1849,254 @@ test("website opportunities can be linked to an existing customer without losing
     page.getByRole("combobox", { name: "Pipeline stage", exact: true }),
   ).toHaveValue("onboarded");
 });
+
+test("time-off requests list every affected clean and can be approved after cover is arranged", async ({
+  page,
+}) => {
+  const project = test.info().project.name;
+  const year = project === "desktop" ? "2035" : "2036";
+  const first = `${year}-05-07`,
+    last = `${year}-05-14`;
+  const source = "22222222-2222-4222-8222-222222222222";
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await login(page, "admin");
+  const operation = async (action: string, data: unknown) => {
+    const response = await page.request.post("/api/operations/", {
+      headers: { origin },
+      data: { action, data },
+    });
+    const result = await response.json();
+    expect(response.status(), result.error).toBe(200);
+    return result;
+  };
+  const client = await operation("customer", {
+    name: `Cover Client ${project}`,
+    email: `cover-client-${project}@example.test`,
+    phone: "+447700900888",
+    address: "42 Synthetic Cover Lane",
+    postcode: "ME14 2AB",
+  });
+  const invite = await page.request.post("/api/cleaners/invite/", {
+    headers: { origin },
+    data: {
+      name: `Cover Cleaner ${project}`,
+      email: `cover-cleaner-${project}@example.test`,
+      availability: Array.from({ length: 7 }, (_, weekday) => ({
+        weekday,
+        start_time: "08:00",
+        end_time: "20:00",
+      })),
+    },
+  });
+  expect(invite.status()).toBe(200);
+  const coverCleaner = (await invite.json()).id;
+  const rates = {
+    customer_rate_pence: 2300,
+    admin_rate_pence: 600,
+    cleaner_rate_pence: 1700,
+  };
+  const booking = (date: string, time: string, extra = {}) =>
+    operation("booking", {
+      customer_id: client.id,
+      cleaner_id: source,
+      date,
+      time,
+      duration_minutes: 120,
+      interval_weeks: 0,
+      occurrences: 1,
+      ...rates,
+      ...extra,
+    });
+  const series = await booking(first, "09:00", {
+    interval_weeks: 1,
+    duration_weeks: 3,
+    occurrences: 3,
+  });
+  const oneOff = await booking(`${year}-05-08`, "13:00");
+  const cancelled = await booking(`${year}-05-09`, "13:00");
+  const completed = await booking(`${year}-05-10`, "13:00");
+  await booking(`${year}-05-06`, "13:00");
+  await operation("visit", { id: cancelled.id, status: "cancelled" });
+  const busy = await booking(first, "09:00", { cleaner_id: coverCleaner });
+  const before = await (await page.request.get("/api/operations/")).json();
+  const seriesVisits = before.visits
+    .filter((v: { series_id: string }) => v.series_id === series.id)
+    .sort((a: { starts_at: string }, b: { starts_at: string }) =>
+      a.starts_at.localeCompare(b.starts_at),
+    );
+  expect(seriesVisits).toHaveLength(3);
+
+  await login(page, "cleaner");
+  await operation("transition", { id: completed.id, status: "started" });
+  await operation("transition", { id: completed.id, status: "completed" });
+  const panel = page.locator("section.panel").filter({
+    has: page.getByRole("heading", { name: "Request time off", exact: true }),
+  });
+  await panel.getByLabel("From", { exact: true }).fill(first);
+  await panel.getByLabel("To", { exact: true }).fill(last);
+  await panel
+    .getByLabel("Note for your admin")
+    .fill(`Family holiday ${project}`);
+  await panel
+    .getByRole("button", { name: "Send leave request", exact: true })
+    .click();
+  await expect(panel.getByRole("status")).toContainText("Saved successfully");
+  const cleanerData = await (await page.request.get("/api/operations/")).json();
+  const leave = cleanerData.leave.find(
+    (r: { reason: string }) => r.reason === `Family holiday ${project}`,
+  );
+  expect(leave.status).toBe("pending");
+  const denied = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "review",
+      data: { id: leave.id, kind: "leave", status: "approved" },
+    },
+  });
+  expect(denied.status()).toBe(403);
+
+  await login(page, "admin");
+  await expect(
+    page.getByRole("link", { name: /time-off.*request.*review/ }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: /time-off.*request.*review/ }).click();
+  const card = page.getByRole("article", {
+    name: `Time off for Jamie Morgan: ${first} to ${last}`,
+    exact: true,
+  });
+  await expect(card).toContainText(`Family holiday ${project}`);
+  await expect(card).toContainText("3 cleans need cover");
+  await expect(card.locator(".leave-cover-visit")).toHaveCount(3);
+  await expect(card.getByText("Recurring visit", { exact: true })).toHaveCount(
+    2,
+  );
+  await expect(card.getByText("One-off visit", { exact: true })).toHaveCount(1);
+  await expect(card).toContainText("42 Synthetic Cover Lane, ME14 2AB");
+  await expect(card).toContainText("09:00–11:00 · 2 hours");
+  await expect(
+    card.getByRole("button", { name: "Approve", exact: true }),
+  ).toBeDisabled();
+  const blocked = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "review",
+      data: { id: leave.id, kind: "leave", status: "approved" },
+    },
+  });
+  expect(blocked.status()).toBe(400);
+  expect((await blocked.json()).error).toMatch(/Reschedule assigned visits/);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `test-results/leave-cover-${project}.png`,
+    fullPage: true,
+  });
+
+  const firstRow = card.locator(".leave-cover-visit").first();
+  await firstRow
+    .getByRole("button", { name: "Assign cover", exact: true })
+    .click();
+  await firstRow
+    .getByRole("combobox", { name: "Cover cleaner", exact: true })
+    .selectOption(coverCleaner);
+  await firstRow
+    .getByRole("button", { name: "Save cover assignment", exact: true })
+    .click();
+  await expect(firstRow.getByRole("alert")).toContainText(
+    "This cleaner already has a visit at that time.",
+  );
+  await expect(card.locator(".leave-cover-visit")).toHaveCount(3);
+  await operation("visit", { id: busy.id, status: "cancelled" });
+  await firstRow
+    .getByRole("button", { name: "Save cover assignment", exact: true })
+    .click();
+  await expect(card).toContainText("2 cleans need cover");
+  let after = await (await page.request.get("/api/operations/")).json();
+  expect(
+    after.visits.find((v: { id: string }) => v.id === seriesVisits[0].id),
+  ).toMatchObject({
+    cleaner_id: coverCleaner,
+    starts_at: seriesVisits[0].starts_at,
+    ends_at: seriesVisits[0].ends_at,
+    series_id: series.id,
+  });
+  expect(
+    after.visit_finances.find(
+      (f: { id: string }) => f.id === seriesVisits[0].id,
+    ),
+  ).toEqual(
+    before.visit_finances.find(
+      (f: { id: string }) => f.id === seriesVisits[0].id,
+    ),
+  );
+  expect(
+    after.booking_series.find((s: { id: string }) => s.id === series.id)
+      .cleaner_id,
+  ).toBe(source);
+
+  await card
+    .locator(".leave-cover-visit")
+    .first()
+    .getByRole("link", { name: "Open visit" })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`visit=${oneOff.id}`));
+  await expect(
+    page.getByRole("heading", { name: "Selected visit", exact: true }),
+  ).toBeVisible();
+  const reschedule = page.locator("form").filter({
+    has: page.getByRole("button", {
+      name: "Reschedule this visit",
+      exact: true,
+    }),
+  });
+  await expect(reschedule.getByLabel("New date", { exact: true })).toHaveValue(
+    `${year}-05-08`,
+  );
+  await operation("visit", {
+    id: oneOff.id,
+    starts_at: `${year}-05-15T12:00:00Z`,
+  });
+  await page.goto("/admin/cleaners/#time-off");
+  await expect(card).toContainText("1 clean needs cover");
+  await card.getByRole("button", { name: "Assign cover", exact: true }).click();
+  await card
+    .getByRole("combobox", { name: "Cover cleaner", exact: true })
+    .selectOption(coverCleaner);
+  await card
+    .getByRole("button", { name: "Save cover assignment", exact: true })
+    .click();
+  await expect(card).toContainText("No cleans need cover");
+  await expect(
+    card.getByRole("button", { name: "Approve", exact: true }),
+  ).toBeEnabled();
+  await card.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(card.locator(".badge-approved")).toHaveText("approved");
+  after = await (await page.request.get("/api/operations/")).json();
+  expect(
+    after.visits.find((v: { id: string }) => v.id === seriesVisits[2].id)
+      .cleaner_id,
+  ).toBe(source);
+  const impossible = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "booking",
+      data: {
+        customer_id: client.id,
+        cleaner_id: source,
+        date: first,
+        time: "16:00",
+        duration_minutes: 60,
+        interval_weeks: 0,
+        occurrences: 1,
+        ...rates,
+      },
+    },
+  });
+  expect(impossible.status()).toBe(400);
+  expect((await impossible.json()).error).toMatch(/approved leave/);
+  expect(errors).toEqual([]);
+});

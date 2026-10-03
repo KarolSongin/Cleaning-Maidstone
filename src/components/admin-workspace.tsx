@@ -23,6 +23,8 @@ import { cleanerInviteSchema } from "@/lib/validation";
 import { VisitFinances } from "./booking-rates";
 import { AdminFinances } from "./admin-finances";
 import { AdminPipeline } from "./admin-pipeline";
+import { LeaveRequests } from "./leave-requests";
+import { pendingLeaveCover } from "@/lib/leave-cover";
 import { stageLabel, contactIsDue } from "@/lib/acquisition";
 import { BookingForm } from "./booking-form";
 import { RecurringBookings } from "./recurring-bookings";
@@ -72,6 +74,7 @@ export function AdminWorkspace({
   initialNow,
   initialLeadId,
   initialCustomerId,
+  initialVisitId,
   initialDueOnly,
 }: {
   initialData: DashboardData;
@@ -81,6 +84,7 @@ export function AdminWorkspace({
   initialNow: string;
   initialLeadId?: string;
   initialCustomerId?: string;
+  initialVisitId?: string;
   initialDueOnly?: boolean;
 }) {
   const [data, setData] = useState(initialData);
@@ -91,7 +95,9 @@ export function AdminWorkspace({
   const [selectedCustomer, setCustomer] = useState<Customer | undefined>(() =>
     initialData.customers.find((c) => c.id === initialCustomerId),
   );
-  const [selectedVisitId, setVisitId] = useState<string | undefined>();
+  const [selectedVisitId, setVisitId] = useState<string | undefined>(
+    initialVisitId,
+  );
   const selectedVisit = data.visits.find((v) => v.id === selectedVisitId);
   const setVisit = (visit: Visit) => setVisitId(visit.id);
   const [selectedCleanerIds, setSelectedCleanerIds] = useState<string[] | null>(
@@ -114,11 +120,13 @@ export function AdminWorkspace({
   }, []);
   useLiveWorkspace(!demo, refresh);
   useEffect(() => {
-    if (section !== "pipeline" && section !== "overview") return;
+    if (!["pipeline", "overview", "cleaners"].includes(section)) return;
     const update = () => {
       if (document.visibilityState === "visible")
         refresh().catch(() =>
-          setError("Could not refresh the pipeline. Use Refresh to try again."),
+          setError(
+            "Could not refresh the workspace. Use Refresh to try again.",
+          ),
         );
     };
     const timer = window.setInterval(update, 60000);
@@ -147,6 +155,7 @@ export function AdminWorkspace({
   const contactsDue = data.acquisition_leads.filter((l) =>
     contactIsDue(l, today),
   );
+  const leaveCover = pendingLeaveCover(data.leave_requests, data.visits);
   const upcoming = data.visits
     .filter((v) => v.status === "scheduled" || v.status === "started")
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
@@ -210,6 +219,23 @@ export function AdminWorkspace({
               <strong>{data.tasks.filter((t) => !t.done).length}</strong>
             </div>
           </div>
+          {leaveCover.requests > 0 && (
+            <Link
+              className="recurring-reminder leave-reminder"
+              href="/admin/cleaners/#time-off"
+            >
+              <strong>
+                {leaveCover.requests} time-off{" "}
+                {leaveCover.requests === 1 ? "request needs" : "requests need"}{" "}
+                review
+              </strong>
+              <span>
+                {leaveCover.visits}{" "}
+                {leaveCover.visits === 1 ? "clean needs" : "cleans need"} cover
+                · Review requests ↗
+              </span>
+            </Link>
+          )}
           {contactsDue.length > 0 && (
             <Link
               className="recurring-reminder pipeline-reminder"
@@ -536,6 +562,9 @@ export function AdminWorkspace({
           </fieldset>
           <CalendarBoard
             data={data}
+            initialDate={
+              initialData.visits.find((v) => v.id === initialVisitId)?.starts_at
+            }
             cleanerIds={visibleCleanerIds}
             onSelect={setVisit}
             onSaved={refresh}
@@ -656,6 +685,13 @@ export function AdminWorkspace({
       )}
       {section === "cleaners" && (
         <>
+          <LeaveRequests
+            data={data}
+            refresh={refresh}
+            review={(id, status) =>
+              run("review", { id, kind: "leave", status })
+            }
+          />
           <div className="ops-columns">
             <section className="panel">
               <h2>Cleaner profiles</h2>
@@ -720,68 +756,64 @@ export function AdminWorkspace({
             </section>
           )}
           <section className="panel">
-            <h2>Availability & leave for review</h2>
+            <h2>Availability changes for review</h2>
             <ul className="data-list">
-              {[
-                ...data.leave_requests.map((r) => ({ ...r, kind: "leave" })),
-                ...data.availability_requests.map((r) => ({
+              {data.availability_requests
+                .map((r) => ({
                   ...r,
                   kind: "availability",
-                })),
-              ].map((r) => (
-                <li key={r.id}>
-                  <div>
-                    <strong>
-                      {cleanerName(r.cleaner_id)} · {r.kind}
-                    </strong>
-                    <small>
-                      {r.kind === "leave"
-                        ? `${r.starts_on} to ${r.ends_on} · ${r.reason}`
-                        : `${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][r.weekday!]} ${r.start_time}–${r.end_time}`}
-                    </small>
-                    <span className={"badge badge-" + r.status}>
-                      {r.status}
-                    </span>
-                  </div>
-                  {r.status === "pending" && (
-                    <div className="inline-actions">
-                      <Button
-                        size="sm"
-                        onClick={() =>
-                          run("review", {
-                            id: r.id,
-                            kind: r.kind,
-                            status: "approved",
-                          })
-                        }
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          run("review", {
-                            id: r.id,
-                            kind: r.kind,
-                            status: "declined",
-                          })
-                        }
-                      >
-                        Decline
-                      </Button>
+                }))
+                .map((r) => (
+                  <li key={r.id}>
+                    <div>
+                      <strong>
+                        {cleanerName(r.cleaner_id)} · {r.kind}
+                      </strong>
+                      <small>
+                        {`${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][r.weekday!]} ${r.start_time}–${r.end_time}`}
+                      </small>
+                      <span className={"badge badge-" + r.status}>
+                        {r.status}
+                      </span>
                     </div>
-                  )}
-                </li>
-              ))}
+                    {r.status === "pending" && (
+                      <div className="inline-actions">
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            run("review", {
+                              id: r.id,
+                              kind: r.kind,
+                              status: "approved",
+                            })
+                          }
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            run("review", {
+                              id: r.id,
+                              kind: r.kind,
+                              status: "declined",
+                            })
+                          }
+                        >
+                          Decline
+                        </Button>
+                      </div>
+                    )}
+                  </li>
+                ))}
             </ul>
-            {!data.leave_requests.length &&
-              !data.availability_requests.length && (
-                <p className="empty-state">
-                  No requests to review. Conflicting visits must be moved before
-                  changes can be approved.
-                </p>
-              )}
+            {!data.availability_requests.length && (
+              <p className="empty-state">
+                No requests to review. Conflicting visits must be moved before
+                changes can be approved.
+              </p>
+            )}
           </section>
         </>
       )}

@@ -110,6 +110,21 @@ export async function initialiseDatabase(db: PGlite, seed = false) {
         ),
       );
     });
+  const leaveCover = await db.query<{ exists: boolean }>(
+    "select to_regprocedure('public.leave_cover_visits(uuid)') is not null as exists",
+  );
+  if (!leaveCover.rows[0].exists)
+    await db.transaction(async (tx) => {
+      await tx.exec(
+        await fs.readFile(
+          path.join(
+            process.cwd(),
+            "supabase/migrations/202610030005_leave_cover.sql",
+          ),
+          "utf8",
+        ),
+      );
+    });
   if (!exists.rows[0].exists && seed) await seedDatabase(db);
 }
 async function seedDatabase(db: PGlite) {

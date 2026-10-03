@@ -9,6 +9,8 @@ import {
   localBootstrap,
 } from "@/lib/local-db";
 import { occurrenceInstants } from "@/lib/scheduling";
+import { visitsNeedingCover } from "@/lib/leave-cover";
+import type { Visit } from "@/lib/models";
 import fs from "node:fs/promises";
 const customer = "44444444-4444-4444-8444-444444444444";
 let db: PGlite;
@@ -916,3 +918,130 @@ it("upgrades legacy recurring terms without changing visits or losing cancelled 
     await legacy.close();
   }
 }, 30000);
+
+describe("leave cover and approval", () => {
+  const rates = {
+    customer_rate_pence: 2100,
+    admin_rate_pence: 500,
+    cleaner_rate_pence: 1600,
+  };
+  const booking = async (date: string, time: string) =>
+    (
+      await admin<{ id: string }>("select create_booking($1) as id", [
+        JSON.stringify({
+          customer_id: customer,
+          cleaner_id: DEMO_CLEANER,
+          date,
+          time,
+          duration_minutes: 60,
+          interval_weeks: 0,
+          occurrences: 1,
+          ...rates,
+        }),
+      ])
+    )[0].id;
+  const request = async (date: string) =>
+    (
+      await cleaner<{ id: string }>("select request_leave($1) as id", [
+        JSON.stringify({
+          starts_on: date,
+          ends_on: date,
+          reason: "Cover integration test",
+        }),
+      ])
+    )[0].id;
+  const review = (id: string) =>
+    admin("select review_request($1)", [
+      JSON.stringify({ id, kind: "leave", status: "approved" }),
+    ]);
+  it("matches the admin cover list, enforces role access and permits approval only after cover", async () => {
+    for (const cleaner_id of [DEMO_CLEANER, DEMO_SECOND_CLEANER])
+      await admin("select save_cleaner_availability($1)", [
+        JSON.stringify({
+          cleaner_id,
+          availability: Array.from({ length: 7 }, (_, weekday) => ({
+            weekday,
+            start_time: "00:00",
+            end_time: "23:59",
+          })),
+        }),
+      ]);
+    const scheduled = await booking("2029-07-02", "00:15");
+    const started = await booking("2029-07-02", "02:00");
+    const cancelled = await booking("2029-07-02", "03:30");
+    await booking("2029-07-03", "00:15");
+    await cleaner("select transition_visit($1,'started')", [started]);
+    await admin("select change_visit($1)", [
+      JSON.stringify({ id: cancelled, status: "cancelled" }),
+    ]);
+    const id = await request("2029-07-02");
+    const cover = await admin<{ id: string }>(
+      "select * from leave_cover_visits($1)",
+      [id],
+    );
+    expect(cover).toEqual([{ id: scheduled }, { id: started }]);
+    const visits = (await admin<Visit>("select * from visits")).map((v) => ({
+      ...v,
+      starts_at: new Date(v.starts_at).toISOString(),
+    }));
+    expect(
+      visitsNeedingCover(
+        {
+          id,
+          cleaner_id: DEMO_CLEANER,
+          status: "pending",
+          starts_on: "2029-07-02",
+          ends_on: "2029-07-02",
+        },
+        visits,
+      ).map((v) => ({ id: v.id })),
+    ).toEqual(cover);
+    await expect(
+      cleaner("select * from leave_cover_visits($1)", [id]),
+    ).rejects.toThrow(/Admin access/);
+    await expect(
+      publicQuery("select * from leave_cover_visits($1)", [id]),
+    ).rejects.toThrow(/permission denied/);
+    await expect(review(id)).rejects.toThrow(/Reschedule assigned visits/);
+    const before = await admin("select * from visit_finances where id=$1", [
+      scheduled,
+    ]);
+    await admin("select change_visit($1)", [
+      JSON.stringify({ id: scheduled, cleaner_id: DEMO_SECOND_CLEANER }),
+    ]);
+    expect(
+      await admin("select * from visit_finances where id=$1", [scheduled]),
+    ).toEqual(before);
+    await expect(review(id)).rejects.toThrow(/Reschedule assigned visits/);
+    await admin("select change_visit($1)", [
+      JSON.stringify({ id: started, status: "cancelled" }),
+    ]);
+    expect(await admin("select * from leave_cover_visits($1)", [id])).toEqual(
+      [],
+    );
+    await review(id);
+    expect(
+      await admin("select status from leave_requests where id=$1", [id]),
+    ).toEqual([{ status: "approved" }]);
+    await expect(booking("2029-07-02", "05:00")).rejects.toThrow(
+      /approved leave/,
+    );
+  });
+  it("does not require cover for completed cleans and retains approval after repeated initialisation", async () => {
+    const completed = await booking("2029-08-02", "09:00");
+    await cleaner("select transition_visit($1,'started')", [completed]);
+    await cleaner("select transition_visit($1,'completed')", [completed]);
+    const id = await request("2029-08-02");
+    expect(await admin("select * from leave_cover_visits($1)", [id])).toEqual(
+      [],
+    );
+    await review(id);
+    await initialiseDatabase(db, true);
+    expect(
+      await admin("select status from leave_requests where id=$1", [id]),
+    ).toEqual([{ status: "approved" }]);
+    expect(
+      await admin("select status from visits where id=$1", [completed]),
+    ).toEqual([{ status: "completed" }]);
+  });
+});

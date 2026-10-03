@@ -15,12 +15,14 @@ import { sendOperation } from "./operation-form";
 type CalendarRange = { start: string; end: string; view: string };
 export default function CalendarBoard({
   data,
+  initialDate,
   cleanerIds,
   onSelect,
   onSaved,
   onError,
 }: {
   data: DashboardData;
+  initialDate?: string;
   cleanerIds: string[];
   onSelect: (v: Visit) => void;
   onSaved: () => Promise<void>;
@@ -130,6 +132,7 @@ export default function CalendarBoard({
           luxonPlugin,
         ]}
         initialView="timeGridWeek"
+        initialDate={initialDate}
         timeZone="Europe/London"
         locale="en-gb"
         firstDay={1}

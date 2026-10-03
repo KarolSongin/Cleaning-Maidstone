@@ -11,6 +11,7 @@ export default async function AdminSection({
   searchParams: Promise<{
     lead?: string | string[];
     customer?: string | string[];
+    visit?: string | string[];
     due?: string | string[];
   }>;
 }) {
@@ -32,6 +33,7 @@ export default async function AdminSection({
   const query = await searchParams;
   return (
     <AdminWorkspace
+      key={`${section}:${typeof query.visit === "string" ? query.visit : ""}`}
       initialData={await dashboard(actor)}
       section={section}
       demo={actor.demo}
@@ -42,6 +44,7 @@ export default async function AdminSection({
         typeof query.customer === "string" ? query.customer : undefined
       }
       initialDueOnly={query.due === "1"}
+      initialVisitId={typeof query.visit === "string" ? query.visit : undefined}
     />
   );
 }
