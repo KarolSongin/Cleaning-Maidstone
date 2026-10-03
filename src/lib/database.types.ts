@@ -259,6 +259,7 @@ export type Database = {
           active: boolean;
           availability_updated_at: string;
           pay_updated_at: string;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -266,6 +267,7 @@ export type Database = {
           active?: boolean;
           availability_updated_at?: string;
           pay_updated_at?: string;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -273,6 +275,7 @@ export type Database = {
           active?: boolean;
           availability_updated_at?: string;
           pay_updated_at?: string;
+          deleted_at?: string | null;
         };
         Relationships: [];
       };
@@ -416,6 +419,7 @@ export type Database = {
           preferences: string;
           internal_notes: string;
           created_at: string;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -427,6 +431,7 @@ export type Database = {
           preferences?: string;
           internal_notes?: string;
           created_at?: string;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -438,6 +443,7 @@ export type Database = {
           preferences?: string;
           internal_notes?: string;
           created_at?: string;
+          deleted_at?: string | null;
         };
         Relationships: [];
       };
@@ -785,9 +791,12 @@ export type Database = {
       };
       create_booking: { Args: { p: Json }; Returns: string };
       delete_booking_series: { Args: { sid: string }; Returns: string };
+      delete_cleaner: { Args: { cid: string }; Returns: string };
+      delete_customer: { Args: { cid: string }; Returns: string };
       enqueue_transcription: { Args: { rid: string }; Returns: undefined };
       ingest_call_event: { Args: { p: Json }; Returns: string };
       is_admin: { Args: Record<string, never>; Returns: boolean };
+      is_current_cleaner: { Args: Record<string, never>; Returns: boolean };
       leave_cover_visits: {
         Args: { request_id: string };
         Returns: { id: string }[];

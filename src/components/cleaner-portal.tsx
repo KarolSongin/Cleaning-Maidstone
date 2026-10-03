@@ -3,6 +3,7 @@ import { PersonName } from "./person-name";
 import { money } from "@/lib/finances";
 import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { CalendarDays, List, LockKeyhole } from "lucide-react";
 import type {
   CleanerJob,
@@ -33,6 +34,7 @@ export function CleanerPortal({
 }) {
   const [data, setData] = useState(initialData);
   const [error, setError] = useState("");
+  const router = useRouter();
   const [view, setView] = useState<"list" | "calendar">("list");
   const [selected, setSelected] = useState<string | null>(null);
   const detailRef = useRef<HTMLElement>(null);
@@ -42,9 +44,19 @@ export function CleanerPortal({
   }, [selected]);
   const refresh = useCallback(async () => {
     const r = await fetch("/api/operations/");
+    if (r.status === 401) {
+      setData({
+        jobs: [],
+        leave: [],
+        availability: [],
+        recurringAvailability: [],
+      });
+      router.replace("/login/");
+      return;
+    }
     if (!r.ok) throw new Error("Could not refresh your rota");
     setData(await r.json());
-  }, []);
+  }, [router]);
   useLiveWorkspace(!demo, refresh, true);
   return (
     <div

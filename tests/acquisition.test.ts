@@ -620,10 +620,13 @@ describe("private acquisition data and reminders", () => {
         expect(
           (
             await legacy.query(
-              `select to_jsonb(t)${t === "enquiries" ? "-'pipeline_id'" : ""} as row from ${t} t order by id`,
+              `select to_jsonb(t)${t === "enquiries" ? "-'pipeline_id'" : t === "customers" ? "-'deleted_at'" : ""} as row from ${t} t order by id`,
             )
           ).rows.map((r) => (r as { row: unknown }).row),
         ).toEqual(before[t]);
+      expect(
+        (await legacy.query("select deleted_at from customers")).rows,
+      ).toEqual([{ deleted_at: null }]);
       expect(
         (
           await legacy.query(

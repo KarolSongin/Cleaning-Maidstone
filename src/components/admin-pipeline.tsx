@@ -49,6 +49,9 @@ export function AdminPipeline({
   const [source, setSource] = useState("all");
   const [dueOnly, setDueOnly] = useState(initialDueOnly);
   const lead = data.acquisition_leads.find((l) => l.id === selectedId);
+  const deletedCustomer = data.customers.some(
+    (c) => c.id === lead?.customer_id && c.deleted_at,
+  );
   const due = data.acquisition_leads.filter((l) => contactIsDue(l, today));
   const visible = data.acquisition_leads
     .filter(
@@ -360,20 +363,29 @@ export function AdminPipeline({
                       place before agreeing regular visits.
                     </p>
                   )}
-                <h3>Move the opportunity forward</h3>
-                <StageForm
-                  key={`${lead.id}-${lead.stage}`}
-                  lead={lead}
-                  onSaved={onSaved}
-                />
-                <details className="pipeline-edit">
-                  <summary>Edit contact details & follow-up</summary>
-                  <OpportunityForm
-                    key={lead.id}
-                    lead={lead}
-                    onSaved={onSaved}
-                  />
-                </details>
+                {deletedCustomer ? (
+                  <p className="alert">
+                    This customer was deleted from active profiles. Their closed
+                    pipeline and financial history are kept for reference.
+                  </p>
+                ) : (
+                  <>
+                    <h3>Move the opportunity forward</h3>
+                    <StageForm
+                      key={`${lead.id}-${lead.stage}`}
+                      lead={lead}
+                      onSaved={onSaved}
+                    />
+                    <details className="pipeline-edit">
+                      <summary>Edit contact details & follow-up</summary>
+                      <OpportunityForm
+                        key={lead.id}
+                        lead={lead}
+                        onSaved={onSaved}
+                      />
+                    </details>
+                  </>
+                )}
               </section>
               <section className="panel">
                 {lead.customer_id ? (
@@ -390,21 +402,25 @@ export function AdminPipeline({
                       className="text-link"
                       href={`/admin/customers/?customer=${lead.customer_id}`}
                     >
-                      Edit home details ↗
+                      {deletedCustomer
+                        ? "View customer history ↗"
+                        : "Edit home details ↗"}
                     </Link>
-                    <details className="pipeline-edit">
-                      <summary>
-                        {lead.stage === "onboarded"
-                          ? "Book a cleaning"
-                          : "Book first cleaning"}
-                      </summary>
-                      <BookingForm
-                        key={lead.id}
-                        data={data}
-                        customerId={lead.customer_id}
-                        onSaved={onSaved}
-                      />
-                    </details>
+                    {!deletedCustomer && (
+                      <details className="pipeline-edit">
+                        <summary>
+                          {lead.stage === "onboarded"
+                            ? "Book a cleaning"
+                            : "Book first cleaning"}
+                        </summary>
+                        <BookingForm
+                          key={lead.id}
+                          data={data}
+                          customerId={lead.customer_id}
+                          onSaved={onSaved}
+                        />
+                      </details>
+                    )}
                   </>
                 ) : (
                   <CustomerLink
@@ -644,11 +660,13 @@ function CustomerLink({
           onChange={(e) => setExistingId(e.target.value)}
         >
           <option value="">Create a new customer profile</option>
-          {data.customers.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} · {c.postcode}
-            </option>
-          ))}
+          {data.customers
+            .filter((c) => !c.deleted_at)
+            .map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} · {c.postcode}
+              </option>
+            ))}
         </select>
       </label>
       <OperationForm

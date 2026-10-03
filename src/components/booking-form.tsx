@@ -62,7 +62,9 @@ export function BookingForm({
           >
             <option value="">Select customer</option>
             {data.customers
-              .filter((c) => !customerId || c.id === customerId)
+              .filter(
+                (c) => !c.deleted_at && (!customerId || c.id === customerId),
+              )
               .map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -75,7 +77,7 @@ export function BookingForm({
           <select className="person-input-cleaner" name="cleaner_id" required>
             <option value="">Select cleaner</option>
             {data.cleaners
-              .filter((c) => c.active)
+              .filter((c) => c.active && !c.deleted_at)
               .map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}

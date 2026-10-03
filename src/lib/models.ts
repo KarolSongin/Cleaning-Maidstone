@@ -20,6 +20,7 @@ export type Content = {
 };
 export type Customer = {
   id: string;
+  deleted_at?: string | null;
   name: string;
   email: string;
   phone: string;
@@ -28,7 +29,12 @@ export type Customer = {
   preferences: string;
   internal_notes: string;
 };
-export type Cleaner = { id: string; name: string; active: boolean };
+export type Cleaner = {
+  id: string;
+  name: string;
+  active: boolean;
+  deleted_at?: string | null;
+};
 export type WeeklyAvailability = {
   weekday: number;
   start_time: string;
@@ -93,6 +99,7 @@ export type Enquiry = {
 };
 export type Task = {
   id: string;
+  customer_id?: string | null;
   title: string;
   due_on: string;
   done: boolean;

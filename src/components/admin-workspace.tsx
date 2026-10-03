@@ -37,6 +37,7 @@ import { RecurringBookings } from "./recurring-bookings";
 import { recurringSummaries, londonToday } from "@/lib/recurring-bookings";
 import { useAdminAttention } from "./admin-navigation";
 import { PersonName } from "./person-name";
+import { DeleteProfile } from "./delete-profile";
 const CalendarBoard = dynamic(() => import("./calendar-board"), {
   ssr: false,
   loading: () => <p className="empty-state">Loading calendar…</p>,
@@ -105,6 +106,7 @@ export function AdminWorkspace({
     publishAttention?.(data, asOf);
   }, [data, asOf, publishAttention]);
   const [search, setSearch] = useState("");
+  const [showDeletedProfiles, setShowDeletedProfiles] = useState(false);
   const [error, setError] = useState("");
   const [selectedCustomer, setCustomer] = useState<Customer | undefined>(() =>
     initialData.customers.find((c) => c.id === initialCustomerId),
@@ -121,6 +123,9 @@ export function AdminWorkspace({
   const visibleCleanerIds =
     selectedCleanerIds ?? data.cleaners.map((c) => c.id);
   const editingCleaner = data.cleaners.find((c) => c.id === editingCleanerId);
+  const deletedSelection = data.customers.find(
+    (c) => c.id === selectedCustomer?.id,
+  )?.deleted_at;
   const [selectedContent, setContent] = useState<Content | undefined>();
   const [selectedConversation, setConversation] = useState<
     Conversation | undefined
@@ -179,6 +184,10 @@ export function AdminWorkspace({
     .filter((v) => v.status === "scheduled" || v.status === "started")
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
   const enquiryList = data.enquiries
+    .filter(
+      (e) =>
+        !data.customers.some((c) => c.id === e.customer_id && c.deleted_at),
+    )
     .filter((e) =>
       [e.name, e.email, e.postcode, e.status]
         .join(" ")
@@ -384,10 +393,18 @@ export function AdminWorkspace({
               New customer
             </Button>
           </div>
+          <label className="profile-history-toggle">
+            <input
+              type="checkbox"
+              checked={showDeletedProfiles}
+              onChange={(e) => setShowDeletedProfiles(e.target.checked)}
+            />
+            Show deleted customer profiles
+          </label>
           <div className="ops-columns">
             <section className="panel">
               <h2>Customers</h2>
-              <div className="table-wrap">
+              <div className="table-wrap customer-table">
                 <table>
                   <thead>
                     <tr>
@@ -400,6 +417,7 @@ export function AdminWorkspace({
                   </thead>
                   <tbody>
                     {data.customers
+                      .filter((c) => showDeletedProfiles || !c.deleted_at)
                       .filter((c) =>
                         [c.name, c.email, c.postcode]
                           .join(" ")
@@ -410,6 +428,9 @@ export function AdminWorkspace({
                         <tr key={c.id}>
                           <td>
                             <PersonName kind="customer">{c.name}</PersonName>
+                            {c.deleted_at && (
+                              <small>Deleted · history retained</small>
+                            )}
                           </td>
                           <td>
                             {c.phone}
@@ -434,8 +455,20 @@ export function AdminWorkspace({
                               className="button button-outline button-sm"
                               onClick={() => setCustomer(c)}
                             >
-                              Edit
+                              {c.deleted_at ? "View history" : "Edit"}
                             </button>
+                            {!c.deleted_at && (
+                              <DeleteProfile
+                                kind="customer"
+                                profile={c}
+                                data={data}
+                                onSaved={async () => {
+                                  await refresh();
+                                  if (selectedCustomer?.id === c.id)
+                                    setCustomer(undefined);
+                                }}
+                              />
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -479,7 +512,13 @@ export function AdminWorkspace({
               )}
             </section>
             <section className="panel">
-              <h2>{selectedCustomer?.id ? "Edit customer" : "Add customer"}</h2>
+              <h2>
+                {deletedSelection
+                  ? "Customer history"
+                  : selectedCustomer?.id
+                    ? "Edit customer"
+                    : "Add customer"}
+              </h2>
               {!selectedCustomer?.id && (
                 <p>
                   New customers start as opportunities in the{" "}
@@ -490,63 +529,83 @@ export function AdminWorkspace({
                   there.
                 </p>
               )}
-              <OperationForm
-                key={selectedCustomer?.id || selectedCustomer?.email || "new"}
-                action="customer"
-                onSaved={refresh}
-                label="Save customer"
-                map={(f) => ({
-                  ...Object.fromEntries(f),
-                  ...(selectedCustomer?.id ? { id: selectedCustomer.id } : {}),
-                })}
-              >
-                <Field
-                  name="name"
-                  label="Customer name"
-                  personKind="customer"
-                  value={selectedCustomer?.name}
-                  required
-                />
-                <div className="form-grid">
+              {deletedSelection ? (
+                <>
+                  <p>
+                    This customer was deleted from active profiles. Their
+                    records are kept for reporting.
+                  </p>
+                  <p>
+                    <PersonName kind="customer">
+                      {selectedCustomer?.name}
+                    </PersonName>{" "}
+                    · {selectedCustomer?.postcode}
+                  </p>
+                  <Link className="text-link" href="/admin/finances/">
+                    View financial history →
+                  </Link>
+                </>
+              ) : (
+                <OperationForm
+                  key={selectedCustomer?.id || selectedCustomer?.email || "new"}
+                  action="customer"
+                  onSaved={refresh}
+                  label="Save customer"
+                  map={(f) => ({
+                    ...Object.fromEntries(f),
+                    ...(selectedCustomer?.id
+                      ? { id: selectedCustomer.id }
+                      : {}),
+                  })}
+                >
                   <Field
-                    name="email"
-                    label="Email"
-                    type="email"
-                    value={selectedCustomer?.email}
+                    name="name"
+                    label="Customer name"
+                    personKind="customer"
+                    value={selectedCustomer?.name}
+                    required
+                  />
+                  <div className="form-grid">
+                    <Field
+                      name="email"
+                      label="Email"
+                      type="email"
+                      value={selectedCustomer?.email}
+                    />
+                    <Field
+                      name="phone"
+                      label="Phone"
+                      value={selectedCustomer?.phone}
+                    />
+                  </div>
+                  <Field
+                    name="address"
+                    label="Home address"
+                    value={selectedCustomer?.address}
+                    required
                   />
                   <Field
-                    name="phone"
-                    label="Phone"
-                    value={selectedCustomer?.phone}
+                    name="postcode"
+                    label="Postcode"
+                    value={selectedCustomer?.postcode}
+                    required
                   />
-                </div>
-                <Field
-                  name="address"
-                  label="Home address"
-                  value={selectedCustomer?.address}
-                  required
-                />
-                <Field
-                  name="postcode"
-                  label="Postcode"
-                  value={selectedCustomer?.postcode}
-                  required
-                />
-                <label>
-                  Cleaning preferences
-                  <textarea
-                    name="preferences"
-                    defaultValue={selectedCustomer?.preferences}
-                  />
-                </label>
-                <label>
-                  Internal notes (admin only)
-                  <textarea
-                    name="internal_notes"
-                    defaultValue={selectedCustomer?.internal_notes}
-                  />
-                </label>
-              </OperationForm>
+                  <label>
+                    Cleaning preferences
+                    <textarea
+                      name="preferences"
+                      defaultValue={selectedCustomer?.preferences}
+                    />
+                  </label>
+                  <label>
+                    Internal notes (admin only)
+                    <textarea
+                      name="internal_notes"
+                      defaultValue={selectedCustomer?.internal_notes}
+                    />
+                  </label>
+                </OperationForm>
+              )}
             </section>
           </div>
         </>
@@ -571,7 +630,7 @@ export function AdminWorkspace({
                     }
                   />
                   <PersonName kind="cleaner">{c.name}</PersonName>
-                  {!c.active && " (inactive)"}
+                  {c.deleted_at ? " (deleted)" : !c.active && " (inactive)"}
                 </label>
               ))}
               <Button
@@ -666,11 +725,17 @@ export function AdminWorkspace({
                         className="person-input-cleaner"
                         defaultValue={selectedVisit.cleaner_id}
                       >
-                        {data.cleaners.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
+                        {data.cleaners
+                          .filter(
+                            (c) =>
+                              !c.deleted_at ||
+                              c.id === selectedVisit.cleaner_id,
+                          )
+                          .map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
                       </select>
                     </label>
                   </OperationForm>
@@ -734,6 +799,14 @@ export function AdminWorkspace({
       )}
       {section === "cleaners" && (
         <>
+          <label className="profile-history-toggle">
+            <input
+              type="checkbox"
+              checked={showDeletedProfiles}
+              onChange={(e) => setShowDeletedProfiles(e.target.checked)}
+            />
+            Show deleted cleaner profiles
+          </label>
           <LeaveRequests
             data={data}
             refresh={refresh}
@@ -745,28 +818,55 @@ export function AdminWorkspace({
             <section className="panel">
               <h2>Cleaner profiles</h2>
               <ul className="data-list">
-                {data.cleaners.map((c) => (
-                  <li key={c.id}>
-                    <div>
-                      <strong>
-                        <PersonName kind="cleaner">{c.name}</PersonName>
-                      </strong>
-                      <small>{c.active ? "Active" : "Inactive"}</small>
-                      <WeeklyAvailabilitySummary
-                        slots={data.availability.filter(
-                          (a) => a.cleaner_id === c.id,
-                        )}
-                      />
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditingCleanerId(c.id)}
-                    >
-                      Edit hours<span className="sr-only"> for {c.name}</span>
-                    </Button>
-                  </li>
-                ))}
+                {data.cleaners
+                  .filter((c) => showDeletedProfiles || !c.deleted_at)
+                  .map((c) => (
+                    <li key={c.id}>
+                      <div>
+                        <strong>
+                          <PersonName kind="cleaner">{c.name}</PersonName>
+                        </strong>
+                        <small>
+                          {c.deleted_at
+                            ? "Deleted · history retained"
+                            : c.active
+                              ? "Active"
+                              : "Inactive"}
+                        </small>
+                        <WeeklyAvailabilitySummary
+                          slots={data.availability.filter(
+                            (a) => a.cleaner_id === c.id,
+                          )}
+                        />
+                      </div>
+                      {c.deleted_at ? (
+                        <Link className="text-link" href="/admin/finances/">
+                          View financial history →
+                        </Link>
+                      ) : (
+                        <div className="profile-actions">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingCleanerId(c.id)}
+                          >
+                            Edit hours
+                            <span className="sr-only"> for {c.name}</span>
+                          </Button>
+                          <DeleteProfile
+                            kind="cleaner"
+                            profile={c}
+                            data={data}
+                            onSaved={async () => {
+                              await refresh();
+                              if (editingCleanerId === c.id)
+                                setEditingCleanerId(null);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </li>
+                  ))}
               </ul>
             </section>
             <section className="panel">
@@ -778,7 +878,7 @@ export function AdminWorkspace({
               </p>
             </section>
           </div>
-          {editingCleaner && (
+          {editingCleaner && !editingCleaner.deleted_at && (
             <section
               className="panel"
               aria-label={`Edit weekly availability for ${editingCleaner.name}`}
@@ -1026,11 +1126,17 @@ export function AdminWorkspace({
                             defaultValue={c.customer_id || ""}
                           >
                             <option value="">Unmatched / shared number</option>
-                            {data.customers.map((customer) => (
-                              <option key={customer.id} value={customer.id}>
-                                {customer.name}
-                              </option>
-                            ))}
+                            {data.customers
+                              .filter(
+                                (customer) =>
+                                  !customer.deleted_at ||
+                                  customer.id === c.customer_id,
+                              )
+                              .map((customer) => (
+                                <option key={customer.id} value={customer.id}>
+                                  {customer.name}
+                                </option>
+                              ))}
                           </select>
                         </label>
                         <label>

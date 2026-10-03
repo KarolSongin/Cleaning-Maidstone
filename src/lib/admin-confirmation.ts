@@ -28,6 +28,16 @@ export function adminConfirmation(
     confirmLabel: "Confirm save",
   });
   switch (action) {
+    case "delete_customer":
+    case "delete_cleaner":
+      return {
+        title: `Delete this ${action === "delete_customer" ? "customer" : "cleaner"}?`,
+        description:
+          "Remove this profile from active operations. All past work and financial history will be kept.",
+        confirmLabel:
+          action === "delete_customer" ? "Delete customer" : "Delete cleaner",
+        danger: true,
+      };
     case "delete_series":
       return {
         title: "Delete this recurring series?",

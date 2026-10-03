@@ -58,7 +58,14 @@ export async function getActor(): Promise<Actor | null> {
     const token = (await cookies()).get("maidstone-demo")?.value;
     const role = token ? await verifyDemoToken(token) : null;
     if (!role) return null;
-    await getLocalDb();
+    const db = await getLocalDb();
+    if (role === "cleaner") {
+      const result = await db.query<{ allowed: boolean }>(
+        "select exists(select 1 from cleaners where id=$1 and active and deleted_at is null) as allowed",
+        [DEMO_CLEANER],
+      );
+      if (!result.rows[0].allowed) return null;
+    }
     return {
       id: role === "admin" ? DEMO_ADMIN : DEMO_CLEANER,
       role,
@@ -79,6 +86,16 @@ export async function getActor(): Promise<Actor | null> {
     .eq("id", user.id)
     .single();
   if (!data || !["admin", "cleaner"].includes(data.role)) return null;
+  if (data.role === "cleaner") {
+    const { data: cleaner } = await client
+      .from("cleaners")
+      .select("id")
+      .eq("id", user.id)
+      .eq("active", true)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (!cleaner) return null;
+  }
   return {
     id: data.id,
     name: data.display_name,

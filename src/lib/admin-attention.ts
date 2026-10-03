@@ -35,7 +35,9 @@ export function adminAttention(
       (lead) => lead.stage === "opportunity" || contactIsDue(lead, today),
     ).length,
     customers: data.customers.filter(
-      (customer) => !customer.address.trim() || !customer.postcode.trim(),
+      (customer) =>
+        !customer.deleted_at &&
+        (!customer.address.trim() || !customer.postcode.trim()),
     ).length,
     calendar: data.visits.filter(
       (visit) =>

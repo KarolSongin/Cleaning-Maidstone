@@ -1908,3 +1908,48 @@ td small {
 .ops-layout .delete-series:hover {
   background: #fbe9ed;
 }
+.profile-history-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  font-size: 14px;
+}
+.profile-history-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #173c50;
+}
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.profile-deletion {
+  position: relative;
+  margin-top: 6px;
+}
+.customer-table th:first-child,
+.customer-table td:first-child {
+  min-width: 130px;
+}
+.profile-deletion-blockers {
+  max-width: 360px;
+  padding: 12px;
+  margin-top: 12px;
+  border: 1px solid #e7bfca;
+  border-radius: 8px;
+  background: #fff7f8;
+  font-size: 13px;
+}
+.profile-deletion-blockers ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+}
+.profile-deletion-blockers li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0;
+}

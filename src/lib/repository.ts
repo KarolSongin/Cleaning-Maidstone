@@ -150,6 +150,12 @@ export async function dashboard(actor: Actor): Promise<DashboardData> {
   result.booking_series = result.booking_series.filter(
     (series) => !series.deleted_at,
   );
+  result.tasks = result.tasks.filter(
+    (task) =>
+      !result.customers.some(
+        (customer) => customer.id === task.customer_id && customer.deleted_at,
+      ),
+  );
   return result;
 }
 export async function cleanerData(actor: Actor) {
@@ -181,6 +187,10 @@ export async function mutate(operation: Operation, actor: Actor) {
       return rpc("create_booking", { p: data }, actor);
     case "delete_series":
       return rpc("delete_booking_series", { sid: data.id }, actor);
+    case "delete_customer":
+      return rpc("delete_customer", { cid: data.id }, actor);
+    case "delete_cleaner":
+      return rpc("delete_cleaner", { cid: data.id }, actor);
     case "visit_finances":
       return rpc("save_visit_finances", { p: data }, actor);
     case "visit":

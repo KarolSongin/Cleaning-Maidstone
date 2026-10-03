@@ -140,6 +140,21 @@ export async function initialiseDatabase(db: PGlite, seed = false) {
         ),
       );
     });
+  const profileDeletion = await db.query<{ exists: boolean }>(
+    "select to_regprocedure('public.delete_customer(uuid)') is not null as exists",
+  );
+  if (!profileDeletion.rows[0].exists)
+    await db.transaction(async (tx) => {
+      await tx.exec(
+        await fs.readFile(
+          path.join(
+            process.cwd(),
+            "supabase/migrations/202610030007_profile_deletion.sql",
+          ),
+          "utf8",
+        ),
+      );
+    });
   if (!exists.rows[0].exists && seed) await seedDatabase(db);
 }
 async function seedDatabase(db: PGlite) {

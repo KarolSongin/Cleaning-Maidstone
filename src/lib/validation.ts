@@ -192,6 +192,14 @@ export const operationSchema = z.discriminatedUnion("action", [
     }),
   }),
   z.object({ action: z.literal("customer"), data: customerSchema }),
+  z.object({
+    action: z.literal("delete_customer"),
+    data: z.object({ id: z.uuid() }),
+  }),
+  z.object({
+    action: z.literal("delete_cleaner"),
+    data: z.object({ id: z.uuid() }),
+  }),
   z.object({ action: z.literal("booking"), data: bookingSchema }),
   z.object({
     action: z.literal("delete_series"),

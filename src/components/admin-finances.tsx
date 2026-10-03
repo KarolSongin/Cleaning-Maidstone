@@ -194,6 +194,7 @@ export function AdminFinances({
                 .map((customer) => (
                   <option key={customer.id} value={customer.id}>
                     {customer.name}
+                    {customer.deleted_at ? " (deleted)" : ""}
                   </option>
                 ))}
             </select>
@@ -214,7 +215,11 @@ export function AdminFinances({
                 .map((cleaner) => (
                   <option key={cleaner.id} value={cleaner.id}>
                     {cleaner.name}
-                    {!cleaner.active ? " (inactive)" : ""}
+                    {cleaner.deleted_at
+                      ? " (deleted)"
+                      : !cleaner.active
+                        ? " (inactive)"
+                        : ""}
                   </option>
                 ))}
             </select>
