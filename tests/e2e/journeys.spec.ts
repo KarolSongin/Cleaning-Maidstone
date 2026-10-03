@@ -203,6 +203,23 @@ test("enquiry validation and persistence in the admin inbox", async ({
   await login(page, "admin");
   await page.goto("/admin/customers/");
   await expect(page.getByText(name, { exact: false })).toBeVisible();
+  const data = await (await page.request.get("/api/operations/")).json();
+  const enquiry = data.enquiries.find((e: { name: string }) => e.name === name);
+  expect(data.acquisition_leads).toContainEqual(
+    expect.objectContaining({
+      id: enquiry.pipeline_id,
+      name,
+      source: "website",
+      stage: "opportunity",
+    }),
+  );
+  await page.goto(`/admin/pipeline/?lead=${enquiry.pipeline_id}`);
+  await expect(
+    page.getByRole("combobox", { name: "Pipeline stage", exact: true }),
+  ).toHaveValue("opportunity");
+  await expect(page.locator(".pipeline-enquiry")).toContainText(
+    "Synthetic browser test.",
+  );
 });
 test("customer changes and overlapping scheduling requests persist", async ({
   page,
@@ -938,10 +955,11 @@ test("admin sees renewal reminders and saves a customer follow-up", async ({
   }
   const end = today.add({ days: 16 });
   await page.goto("/admin/");
-  await expect(page.locator(".recurring-reminder")).toContainText(
-    "within a month",
-  );
-  await page.locator(".recurring-reminder").click();
+  const renewalReminder = page.getByRole("link", {
+    name: /recurring bookings? ends? within a month/,
+  });
+  await expect(renewalReminder).toContainText("within a month");
+  await renewalReminder.click();
   await page
     .getByRole("combobox", { name: "Booking status", exact: true })
     .selectOption("ending-soon");
@@ -1545,4 +1563,289 @@ test("admin finances reconcile earnings, forecasts, filters and a full CSV expor
     ),
   ).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test("manual acquisition advances through booking and recurring agreement without duplicate profiles", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  const project = test.info().project.name;
+  const name = `Pipeline ${project} ${Date.now()}`;
+  const firstDate = project === "desktop" ? "2048-01-07" : "2048-01-08";
+  await login(page, "admin");
+  await page.goto("/admin/pipeline/");
+  await page
+    .getByRole("button", { name: "Add opportunity", exact: true })
+    .click();
+  await page.getByLabel("Opportunity name", { exact: true }).fill(name);
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill(`pipeline-${project}@example.test`);
+  await page.getByLabel("Phone", { exact: true }).fill("07700900999");
+  await page
+    .getByLabel("Private pipeline notes")
+    .fill("Private acquisition note, quote £18 per hour.");
+  await page
+    .getByRole("button", { name: "Save opportunity", exact: true })
+    .click();
+  const pipelineStage = page.getByRole("combobox", {
+    name: "Pipeline stage",
+    exact: true,
+  });
+  await expect(pipelineStage).toHaveValue("opportunity");
+  for (const next of ["contacted", "quoted"]) {
+    await pipelineStage.selectOption(next);
+    await page
+      .getByLabel("Stage change note (optional)")
+      .fill(
+        next === "quoted"
+          ? "Quote agreed for a trial clean"
+          : "Contacted for home details",
+      );
+    await page.getByRole("button", { name: "Save stage", exact: true }).click();
+    await expect(
+      page.locator("#pipeline-detail .pipeline-stage").first(),
+    ).toContainText(
+      next === "quoted" ? "Quote given" : "Contacted for details",
+    );
+  }
+  await page
+    .getByLabel("Home address", { exact: true })
+    .fill("9 Synthetic Pipeline Street");
+  await page.getByLabel("Home postcode", { exact: true }).fill("ME14 1AA");
+  await page
+    .getByRole("button", { name: "Create customer profile", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Customer profile", exact: true }),
+  ).toBeVisible();
+  await page
+    .locator("summary")
+    .filter({ hasText: "Book first cleaning" })
+    .click();
+  const bookingForm = page.locator("#pipeline-detail form").filter({
+    has: page.getByRole("button", { name: "Create booking", exact: true }),
+  });
+  await expect(
+    bookingForm.getByRole("combobox", { name: "Customer", exact: true }),
+  ).not.toHaveValue("");
+  await bookingForm
+    .getByRole("combobox", { name: "Cleaner", exact: true })
+    .selectOption({ label: "Jamie Morgan" });
+  await bookingForm.getByLabel("First date", { exact: true }).fill(firstDate);
+  await bookingForm.getByLabel("Local start time").fill("14:00");
+  await bookingForm
+    .getByRole("combobox", { name: "Duration", exact: true })
+    .selectOption("60");
+  await bookingForm
+    .getByLabel("Customer hourly rate (£)", { exact: true })
+    .fill("18");
+  await bookingForm
+    .getByLabel("Admin hourly share (£)", { exact: true })
+    .fill("3");
+  await bookingForm
+    .getByLabel("Cleaner hourly cash pay (£)", { exact: true })
+    .fill("15");
+  await bookingForm
+    .getByRole("button", { name: "Create booking", exact: true })
+    .click();
+  await expect(pipelineStage).toHaveValue("first_clean_booked");
+  let data = await (await page.request.get("/api/operations/")).json();
+  const lead = data.acquisition_leads.find(
+    (l: { name: string }) => l.name === name,
+  );
+  expect(
+    data.customers.filter((c: { name: string }) => c.name === name),
+  ).toHaveLength(1);
+  expect(lead.first_clean_on).toBe(firstDate);
+  const cancelled = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "visit",
+      data: { id: lead.first_visit_id, status: "cancelled" },
+    },
+  });
+  expect(cancelled.ok()).toBe(true);
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(pipelineStage).toHaveValue("quoted");
+  const { Temporal } = await import("@js-temporal/polyfill");
+  const past = Temporal.Now.plainDateISO("Europe/London").subtract({
+    days: project === "desktop" ? 10 : 11,
+  });
+  await bookingForm
+    .getByLabel("First date", { exact: true })
+    .fill(past.toString());
+  await bookingForm.getByLabel("Local start time").fill("17:00");
+  await bookingForm
+    .getByRole("button", { name: "Create booking", exact: true })
+    .click();
+  await expect(pipelineStage).toHaveValue("recurring_follow_up");
+  await expect(page.locator("#pipeline-detail")).toContainText(
+    "Confirm the visit took place",
+  );
+  data = await (await page.request.get("/api/operations/")).json();
+  expect(
+    data.acquisition_leads.find((l: { id: string }) => l.id === lead.id),
+  ).toMatchObject({
+    follow_up_due_on: past.add({ days: 1 }).toString(),
+    stage: "recurring_follow_up",
+  });
+  await page.goto("/admin/");
+  await page
+    .getByRole("link", { name: /customer contacts? (are|is) due/ })
+    .click();
+  await expect(
+    page.getByLabel("Only contacts due", { exact: true }),
+  ).toBeChecked();
+  await page.getByRole("button", { name: `Open ${name}`, exact: true }).click();
+  await expect(pipelineStage).toHaveValue("recurring_follow_up");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: `test-results/pipeline-follow-up-${project}.png`,
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await pipelineStage.selectOption("onboarded");
+  await page
+    .getByLabel("Stage change note (optional)")
+    .fill("Customer agreed weekly recurring cleaning");
+  await page.getByRole("button", { name: "Save stage", exact: true }).click();
+  await expect(
+    page.locator("#pipeline-detail .pipeline-stage").first(),
+  ).toHaveText("Onboarded regular client");
+  await page.goto(`/admin/pipeline/?lead=${lead.id}`);
+  await expect(pipelineStage).toHaveValue("onboarded");
+  await expect(page.locator(".pipeline-history")).toContainText(
+    "Customer agreed weekly recurring cleaning",
+  );
+  await expect(page.locator(".pipeline-history")).toContainText("Automatic");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: `test-results/pipeline-onboarded-${project}.png`,
+    fullPage: true,
+  });
+  await login(page, "cleaner");
+  await page.goto("/admin/pipeline/");
+  await expect(page).toHaveURL(/\/cleaner\/$/);
+  const safe = await (await page.request.get("/api/operations/")).json();
+  expect(safe).not.toHaveProperty("acquisition_leads");
+  expect(safe).not.toHaveProperty("acquisition_history");
+  expect(JSON.stringify(safe)).not.toContain("Private acquisition note");
+  const denied = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "pipeline_stage",
+      data: { id: lead.id, expected_stage: "onboarded", stage: "closed" },
+    },
+  });
+  expect(denied.status()).toBe(403);
+  expect(
+    (await page.request.post("/api/jobs/customer-pipeline/")).status(),
+  ).toBe(403);
+  expect(errors).toEqual([]);
+});
+
+test("website opportunities can be linked to an existing customer without losing their stage", async ({
+  page,
+}) => {
+  const project = test.info().project.name;
+  const name = `Returning pipeline ${project} ${Date.now()}`;
+  await login(page, "admin");
+  const created = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "customer",
+      data: {
+        name,
+        email: `return-${project}@example.test`,
+        phone: "07700900998",
+        address: "14 Synthetic Returning Street",
+        postcode: "ME14 1AA",
+        internal_notes: "Retain private profile note",
+      },
+    },
+  });
+  expect(created.ok()).toBe(true);
+  const customerId = (await created.json()).id;
+  let data = await (await page.request.get("/api/operations/")).json();
+  const existingLead = data.acquisition_leads.find(
+    (l: { customer_id: string }) => l.customer_id === customerId,
+  );
+  expect(
+    (
+      await page.request.post("/api/operations/", {
+        headers: { origin },
+        data: {
+          action: "pipeline_stage",
+          data: {
+            id: existingLead.id,
+            expected_stage: "opportunity",
+            stage: "onboarded",
+          },
+        },
+      })
+    ).ok(),
+  ).toBe(true);
+  const enquiry = await page.request.post("/api/enquiries/", {
+    headers: { origin },
+    data: {
+      name,
+      email: `return-${project}@example.test`,
+      phone: "07700900998",
+      postcode: "ME14 1AA",
+      frequency: "discuss",
+      home_size: "2 bedrooms",
+      preferred_days: ["Monday"],
+      notes: "New website request from a regular customer",
+      started_at: Date.now() - 3000,
+    },
+  });
+  expect(enquiry.status()).toBe(201);
+  data = await (await page.request.get("/api/operations/")).json();
+  const incoming = data.acquisition_leads.find(
+    (l: { name: string; source: string }) =>
+      l.name === name && l.source === "website",
+  );
+  await page.goto(`/admin/pipeline/?lead=${incoming.id}`);
+  await page
+    .getByRole("combobox", { name: "Customer profile", exact: true })
+    .selectOption(customerId);
+  await page
+    .getByRole("button", { name: "Link existing customer", exact: true })
+    .click();
+  await expect(
+    page.getByRole("combobox", { name: "Pipeline stage", exact: true }),
+  ).toHaveValue("onboarded");
+  await expect(page.locator(".pipeline-enquiry")).toContainText(
+    "New website request from a regular customer",
+  );
+  data = await (await page.request.get("/api/operations/")).json();
+  expect(
+    data.customers.filter((c: { name: string }) => c.name === name),
+  ).toHaveLength(1);
+  expect(
+    data.customers.find((c: { id: string }) => c.id === customerId)
+      .internal_notes,
+  ).toBe("Retain private profile note");
+  expect(
+    data.acquisition_leads.filter((l: { name: string }) => l.name === name),
+  ).toHaveLength(1);
+  expect(
+    data.enquiries.find((e: { name: string }) => e.name === name),
+  ).toMatchObject({ customer_id: customerId, pipeline_id: existingLead.id });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.reload();
+  await expect(page).toHaveURL(new RegExp(`lead=${existingLead.id}`));
+  await expect(
+    page.getByRole("combobox", { name: "Pipeline stage", exact: true }),
+  ).toHaveValue("onboarded");
 });

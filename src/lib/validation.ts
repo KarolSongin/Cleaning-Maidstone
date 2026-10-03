@@ -64,6 +64,7 @@ export const enquirySchema = z.object({
 });
 export const customerSchema = z.object({
   id: z.uuid().optional(),
+  pipeline_id: z.uuid().optional(),
   name: text(100).min(2),
   email: z.email().or(z.literal("")),
   phone: text(30),
@@ -72,6 +73,28 @@ export const customerSchema = z.object({
   preferences: text(2000).default(""),
   internal_notes: text(4000).default(""),
 });
+const pipelineStages = z.enum([
+  "opportunity",
+  "contacted",
+  "quoted",
+  "first_clean_booked",
+  "recurring_follow_up",
+  "onboarded",
+  "closed",
+]);
+export const opportunitySchema = z
+  .object({
+    id: z.uuid().optional(),
+    name: text(100).min(2),
+    email: z.email().max(254).or(z.literal("")),
+    phone: text(30),
+    postcode: text(10).default(""),
+    notes: text(10000).default(""),
+    next_contact_on: date.or(z.literal("")).default(""),
+  })
+  .refine((p) => p.email.length > 0 || p.phone.length > 0, {
+    message: "Add an email address or phone number",
+  });
 const rate = z.number().int().min(0).max(100000);
 const rateFields = {
   customer_rate_pence: rate.min(1),
@@ -145,6 +168,22 @@ export const contentSchema = z.object({
   published_at: z.iso.datetime().or(z.literal("")).optional(),
 });
 export const operationSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("opportunity"), data: opportunitySchema }),
+  z.object({
+    action: z.literal("pipeline_stage"),
+    data: z.object({
+      id: z.uuid(),
+      expected_stage: pipelineStages,
+      stage: z.enum([
+        "opportunity",
+        "contacted",
+        "quoted",
+        "onboarded",
+        "closed",
+      ]),
+      note: text(2000).default(""),
+    }),
+  }),
   z.object({
     action: z.literal("cleaner_availability"),
     data: z.object({

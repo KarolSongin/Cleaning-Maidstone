@@ -11,7 +11,7 @@ const config: NextConfig = {
   },
   serverExternalPackages: ["@electric-sql/pglite"],
   outputFileTracingExcludes: {
-    "/*": [
+    "*": [
       ".local/**/*",
       ".env*",
       "test-results/**/*",

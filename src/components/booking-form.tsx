@@ -9,9 +9,11 @@ import { OperationForm, Field } from "./operation-form";
 export function BookingForm({
   data,
   onSaved,
+  customerId,
 }: {
   data: DashboardData;
   onSaved: () => Promise<void>;
+  customerId?: string;
 }) {
   const [interval, setInterval] = useState<0 | 1 | 2>(0);
   const [weeks, setWeeks] = useState("8");
@@ -52,13 +54,15 @@ export function BookingForm({
       <div className="form-grid">
         <label>
           Customer
-          <select name="customer_id" required>
+          <select name="customer_id" required defaultValue={customerId ?? ""}>
             <option value="">Select customer</option>
-            {data.customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            {data.customers
+              .filter((c) => !customerId || c.id === customerId)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
           </select>
         </label>
         <label>

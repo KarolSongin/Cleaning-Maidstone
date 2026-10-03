@@ -8,7 +8,7 @@ import { demoEnabled, DEMO_ADMIN, DEMO_CLEANER, getLocalDb } from "./local-db";
 import { sessionClient, supabaseConfigured } from "./supabase";
 import type { Actor, Role } from "./models";
 async function demoKey() {
-  const dir = path.join(process.cwd(), ".local");
+  const dir = path.join(/* turbopackIgnore: true */ process.cwd(), ".local");
   await fs.mkdir(dir, { recursive: true });
   const file = path.join(dir, "session.key");
   try {

@@ -9,6 +9,96 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      acquisition_history: {
+        Row: {
+          id: string;
+          lead_id: string;
+          from_stage: string | null;
+          to_stage: string;
+          reason: string;
+          note: string;
+          actor_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id: string;
+          from_stage?: string | null;
+          to_stage: string;
+          reason: string;
+          note?: string;
+          actor_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          lead_id?: string;
+          from_stage?: string | null;
+          to_stage?: string;
+          reason?: string;
+          note?: string;
+          actor_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      acquisition_leads: {
+        Row: {
+          id: string;
+          customer_id: string | null;
+          name: string;
+          email: string;
+          phone: string;
+          postcode: string;
+          source: string;
+          stage: string;
+          stage_before_booking: string | null;
+          first_visit_id: string | null;
+          first_clean_on: string | null;
+          follow_up_due_on: string | null;
+          next_contact_on: string | null;
+          notes: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id?: string | null;
+          name: string;
+          email?: string;
+          phone?: string;
+          postcode?: string;
+          source: string;
+          stage?: string;
+          stage_before_booking?: string | null;
+          first_visit_id?: string | null;
+          first_clean_on?: string | null;
+          follow_up_due_on?: string | null;
+          next_contact_on?: string | null;
+          notes?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          customer_id?: string | null;
+          name?: string;
+          email?: string;
+          phone?: string;
+          postcode?: string;
+          source?: string;
+          stage?: string;
+          stage_before_booking?: string | null;
+          first_visit_id?: string | null;
+          first_clean_on?: string | null;
+          follow_up_due_on?: string | null;
+          next_contact_on?: string | null;
+          notes?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       audit_records: {
         Row: {
           id: number;
@@ -362,6 +452,7 @@ export type Database = {
           notes: string;
           status: string;
           created_at: string;
+          pipeline_id: string;
         };
         Insert: {
           id?: string;
@@ -376,6 +467,7 @@ export type Database = {
           notes?: string;
           status?: string;
           created_at?: string;
+          pipeline_id: string;
         };
         Update: {
           id?: string;
@@ -390,6 +482,7 @@ export type Database = {
           notes?: string;
           status?: string;
           created_at?: string;
+          pipeline_id?: string;
         };
         Relationships: [];
       };
@@ -691,23 +784,46 @@ export type Database = {
       enqueue_transcription: { Args: { rid: string }; Returns: undefined };
       ingest_call_event: { Args: { p: Json }; Returns: string };
       is_admin: { Args: Record<string, never>; Returns: boolean };
+      pipeline_booking_stage: {
+        Args: { first_start: string; as_of: string };
+        Returns: string;
+      };
       purge_expired_recording: { Args: { rid: string }; Returns: undefined };
+      record_pipeline_change: {
+        Args: {
+          lid: string;
+          previous: string;
+          current_stage: string;
+          why: string;
+          description: string;
+        };
+        Returns: undefined;
+      };
+      refresh_customer_pipeline: { Args: { cid: string }; Returns: boolean };
       register_cleaner: { Args: { p: Json }; Returns: undefined };
       remove_recording: { Args: { rid: string }; Returns: undefined };
       request_availability: { Args: { p: Json }; Returns: string };
       request_leave: { Args: { p: Json }; Returns: string };
       require_admin: { Args: Record<string, never>; Returns: undefined };
       review_request: { Args: { p: Json }; Returns: undefined };
+      run_customer_pipeline_job: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
       save_cleaner_availability: { Args: { p: Json }; Returns: undefined };
       save_content: { Args: { p: Json }; Returns: string };
       save_customer: { Args: { p: Json }; Returns: string };
+      save_opportunity: { Args: { p: Json }; Returns: string };
       save_task: { Args: { p: Json }; Returns: string };
       save_visit_finances: { Args: { p: Json }; Returns: undefined };
+      set_pipeline_stage: { Args: { p: Json }; Returns: undefined };
       set_transcript: { Args: { p: Json }; Returns: undefined };
       submit_enquiry: {
         Args: { p: Json; throttle_key: string };
         Returns: string;
       };
+      sync_customer_pipeline: { Args: Record<string, never>; Returns: number };
+      sync_pipeline_internal: { Args: Record<string, never>; Returns: number };
       transition_visit: {
         Args: { vid: string; new_status: string };
         Returns: undefined;

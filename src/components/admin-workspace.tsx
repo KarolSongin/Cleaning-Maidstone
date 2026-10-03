@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import type {
@@ -22,6 +22,8 @@ import {
 import { cleanerInviteSchema } from "@/lib/validation";
 import { VisitFinances } from "./booking-rates";
 import { AdminFinances } from "./admin-finances";
+import { AdminPipeline } from "./admin-pipeline";
+import { stageLabel, contactIsDue } from "@/lib/acquisition";
 import { BookingForm } from "./booking-form";
 import { RecurringBookings } from "./recurring-bookings";
 import { recurringSummaries, londonToday } from "@/lib/recurring-bookings";
@@ -36,6 +38,7 @@ const ContentEditor = dynamic(() => import("./content-editor"), {
 const names: Record<string, string> = {
   overview: "Your business, at a glance.",
   customers: "People & their homes.",
+  pipeline: "From enquiry to regular client.",
   calendar: "A well-organised week.",
   recurring: "Recurring bookings.",
   finances: "Your finances, in focus.",
@@ -67,19 +70,27 @@ export function AdminWorkspace({
   demo,
   initialToday,
   initialNow,
+  initialLeadId,
+  initialCustomerId,
+  initialDueOnly,
 }: {
   initialData: DashboardData;
   section: string;
   demo: boolean;
   initialToday: string;
   initialNow: string;
+  initialLeadId?: string;
+  initialCustomerId?: string;
+  initialDueOnly?: boolean;
 }) {
   const [data, setData] = useState(initialData);
   const [today, setToday] = useState(initialToday);
   const [asOf, setAsOf] = useState(initialNow);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
-  const [selectedCustomer, setCustomer] = useState<Customer | undefined>();
+  const [selectedCustomer, setCustomer] = useState<Customer | undefined>(() =>
+    initialData.customers.find((c) => c.id === initialCustomerId),
+  );
   const [selectedVisitId, setVisitId] = useState<string | undefined>();
   const selectedVisit = data.visits.find((v) => v.id === selectedVisitId);
   const setVisit = (visit: Visit) => setVisitId(visit.id);
@@ -102,6 +113,21 @@ export function AdminWorkspace({
     setAsOf(new Date().toISOString());
   }, []);
   useLiveWorkspace(!demo, refresh);
+  useEffect(() => {
+    if (section !== "pipeline" && section !== "overview") return;
+    const update = () => {
+      if (document.visibilityState === "visible")
+        refresh().catch(() =>
+          setError("Could not refresh the pipeline. Use Refresh to try again."),
+        );
+    };
+    const timer = window.setInterval(update, 60000);
+    window.addEventListener("focus", update);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", update);
+    };
+  }, [section, refresh]);
   const run = async (action: string, value: unknown) => {
     setError("");
     try {
@@ -117,6 +143,9 @@ export function AdminWorkspace({
     data.cleaners.find((c) => c.id === id)?.name || "Cleaner";
   const endingSoon = recurringSummaries(data, today).filter(
     (s) => s.status === "ending-soon",
+  );
+  const contactsDue = data.acquisition_leads.filter((l) =>
+    contactIsDue(l, today),
   );
   const upcoming = data.visits
     .filter((v) => v.status === "scheduled" || v.status === "started")
@@ -135,13 +164,15 @@ export function AdminWorkspace({
         <div>
           <h1>{names[section]}</h1>
           <p>
-            {section === "calendar"
-              ? "Day, week and month views. All times are Europe/London."
-              : section === "recurring"
-                ? "Start dates, end dates and follow-ups for your regular customers."
-                : section === "finances"
-                  ? "Earned income, booked work and the value of every visit."
-                  : "A clear place to look after the details."}
+            {section === "pipeline"
+              ? "One linked journey for website enquiries, phone calls and manual entries."
+              : section === "calendar"
+                ? "Day, week and month views. All times are Europe/London."
+                : section === "recurring"
+                  ? "Start dates, end dates and follow-ups for your regular customers."
+                  : section === "finances"
+                    ? "Earned income, booked work and the value of every visit."
+                    : "A clear place to look after the details."}
           </p>
         </div>
         <Button
@@ -165,9 +196,13 @@ export function AdminWorkspace({
               <strong>{upcoming.length}</strong>
             </div>
             <div className="metric-card">
-              <span>New enquiries</span>
+              <span>New opportunities</span>
               <strong>
-                {data.enquiries.filter((e) => e.status === "new").length}
+                {
+                  data.acquisition_leads.filter(
+                    (l) => l.stage === "opportunity",
+                  ).length
+                }
               </strong>
             </div>
             <div className="metric-card">
@@ -175,6 +210,18 @@ export function AdminWorkspace({
               <strong>{data.tasks.filter((t) => !t.done).length}</strong>
             </div>
           </div>
+          {contactsDue.length > 0 && (
+            <Link
+              className="recurring-reminder pipeline-reminder"
+              href="/admin/pipeline/?due=1"
+            >
+              <strong>
+                {contactsDue.length} customer{" "}
+                {contactsDue.length === 1 ? "contact is" : "contacts are"} due
+              </strong>
+              <span>Review enquiries and recurring agreements ↗</span>
+            </Link>
+          )}
           {endingSoon.length > 0 && (
             <Link className="recurring-reminder" href="/admin/recurring/">
               <strong>
@@ -263,6 +310,15 @@ export function AdminWorkspace({
       {section === "recurring" && (
         <RecurringBookings data={data} today={today} onSaved={refresh} />
       )}
+      {section === "pipeline" && (
+        <AdminPipeline
+          data={data}
+          today={today}
+          onSaved={refresh}
+          initialLeadId={initialLeadId}
+          initialDueOnly={initialDueOnly}
+        />
+      )}
       {section === "customers" && (
         <>
           <div className="search-row">
@@ -286,6 +342,7 @@ export function AdminWorkspace({
                       <th>Name</th>
                       <th>Contact</th>
                       <th>Home</th>
+                      <th>Pipeline</th>
                       <th />
                     </tr>
                   </thead>
@@ -305,6 +362,19 @@ export function AdminWorkspace({
                             <small>{c.email}</small>
                           </td>
                           <td>{c.postcode}</td>
+                          <td>
+                            {data.acquisition_leads
+                              .filter((l) => l.customer_id === c.id)
+                              .map((l) => (
+                                <Link
+                                  key={l.id}
+                                  className="text-link"
+                                  href={`/admin/pipeline/?lead=${l.id}`}
+                                >
+                                  {stageLabel(l.stage)}
+                                </Link>
+                              ))}
+                          </td>
                           <td>
                             <button
                               className="button button-outline button-sm"
@@ -334,40 +404,17 @@ export function AdminWorkspace({
                         {e.email} · {e.phone}
                       </small>
                       <p>{e.notes}</p>
-                      <label>
-                        Status
-                        <select
-                          value={e.status}
-                          onChange={(event) =>
-                            run("enquiry", {
-                              id: e.id,
-                              status: event.target.value,
-                            })
-                          }
-                        >
-                          <option value="new">New</option>
-                          <option value="contacted">Contacted</option>
-                          <option value="converted">Converted</option>
-                          <option value="closed">Closed</option>
-                        </select>
-                      </label>
-                      <button
-                        className="button button-ghost button-sm"
-                        onClick={() =>
-                          setCustomer({
-                            id: "",
-                            name: e.name,
-                            email: e.email,
-                            phone: e.phone,
-                            address: "",
-                            postcode: e.postcode,
-                            preferences: e.notes,
-                            internal_notes: "",
-                          })
-                        }
+                      <Link
+                        className="text-link"
+                        href={`/admin/pipeline/?lead=${e.pipeline_id}`}
                       >
-                        Use details for a customer →
-                      </button>
+                        {stageLabel(
+                          data.acquisition_leads.find(
+                            (l) => l.id === e.pipeline_id,
+                          )?.stage ?? "opportunity",
+                        )}{" "}
+                        · Open pipeline →
+                      </Link>
                     </div>
                   </li>
                 ))}
@@ -378,6 +425,16 @@ export function AdminWorkspace({
             </section>
             <section className="panel">
               <h2>{selectedCustomer?.id ? "Edit customer" : "Add customer"}</h2>
+              {!selectedCustomer?.id && (
+                <p>
+                  New customers start as opportunities in the{" "}
+                  <Link className="text-link" href="/admin/pipeline/">
+                    customer pipeline
+                  </Link>
+                  . For enquiries without a home address yet, add an opportunity
+                  there.
+                </p>
+              )}
               <OperationForm
                 key={selectedCustomer?.id || selectedCustomer?.email || "new"}
                 action="customer"

@@ -95,6 +95,21 @@ export async function initialiseDatabase(db: PGlite, seed = false) {
         ),
       );
     });
+  const pipeline = await db.query<{ exists: boolean }>(
+    "select to_regclass('public.acquisition_leads') is not null as exists",
+  );
+  if (!pipeline.rows[0].exists)
+    await db.transaction(async (tx) => {
+      await tx.exec(
+        await fs.readFile(
+          path.join(
+            process.cwd(),
+            "supabase/migrations/202610030004_customer_pipeline.sql",
+          ),
+          "utf8",
+        ),
+      );
+    });
   if (!exists.rows[0].exists && seed) await seedDatabase(db);
 }
 async function seedDatabase(db: PGlite) {
@@ -154,7 +169,10 @@ const globalDb = globalThis as typeof globalThis & {
 export async function getLocalDb() {
   if (!demoEnabled()) throw new Error("Local demo is disabled");
   globalDb.maidstoneDb ??= (async () => {
-    await fs.mkdir(path.join(process.cwd(), ".local"), { recursive: true });
+    await fs.mkdir(
+      path.join(/* turbopackIgnore: true */ process.cwd(), ".local"),
+      { recursive: true },
+    );
     const name = process.env.DEMO_DATABASE_NAME || "database";
     if (!/^[a-zA-Z0-9_-]{1,120}$/.test(name))
       throw new Error("Use a simple local demo database name");

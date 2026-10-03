@@ -20,6 +20,7 @@ import type { Operation } from "./validation";
 type Table = keyof Database["public"]["Tables"];
 type Fn = keyof Database["public"]["Functions"];
 const dateColumns: Partial<Record<Table, string[]>> = {
+  acquisition_leads: ["first_clean_on", "follow_up_due_on", "next_contact_on"],
   booking_series: ["anchor_date", "ends_on"],
   leave_requests: ["starts_on", "ends_on"],
   follow_up_tasks: ["due_on"],
@@ -50,9 +51,16 @@ export async function rows<T>(
         ? serviceClient()
         : await sessionClient();
   if (
-    ["visits", "booking_series", "visit_finances", "series_finances"].includes(
-      table,
-    )
+    [
+      "visits",
+      "booking_series",
+      "visit_finances",
+      "series_finances",
+      "acquisition_leads",
+      "acquisition_history",
+      "enquiries",
+      "customers",
+    ].includes(table)
   ) {
     // A year's visits can exceed PostgREST's per-request row limit. Fetch the
     // complete RLS-visible set so counts and free calendar hours stay accurate.
@@ -114,7 +122,10 @@ export async function rpc<T>(
 }
 export async function dashboard(actor: Actor): Promise<DashboardData> {
   if (actor.role !== "admin") throw new Error("Admin access required");
+  await rpc("sync_customer_pipeline", {}, actor);
   const tables: Table[] = [
+    "acquisition_leads",
+    "acquisition_history",
     "customers",
     "cleaners",
     "visits",
@@ -154,6 +165,10 @@ export async function mutate(operation: Operation, actor: Actor) {
     if (actor.role !== "cleaner") throw new Error("Cleaner access required");
   } else if (actor.role !== "admin") throw new Error("Admin access required");
   switch (action) {
+    case "opportunity":
+      return rpc("save_opportunity", { p: data }, actor);
+    case "pipeline_stage":
+      return rpc("set_pipeline_stage", { p: data }, actor);
     case "cleaner_availability":
       return rpc("save_cleaner_availability", { p: data }, actor);
     case "customer":

@@ -12,6 +12,7 @@ const migrations = await Promise.all(
     "202610030001_cleaner_availability.sql",
     "202610030002_recurring_bookings.sql",
     "202610030003_booking_finances.sql",
+    "202610030004_customer_pipeline.sql",
   ].map((n) => fs.readFile("supabase/migrations/" + n, "utf8")),
 );
 for (const sql of migrations) await db.exec(sql);

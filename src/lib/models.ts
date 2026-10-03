@@ -77,6 +77,8 @@ export type CleanerJob = {
 };
 export type Enquiry = {
   id: string;
+  customer_id: string | null;
+  pipeline_id: string;
   name: string;
   email: string;
   phone: string;
@@ -121,6 +123,8 @@ export type RequestRecord = {
   end_time?: string;
 };
 export type DashboardData = {
+  acquisition_leads: AcquisitionLead[];
+  acquisition_history: AcquisitionHistory[];
   customers: Customer[];
   cleaners: Cleaner[];
   visits: Visit[];
@@ -155,4 +159,48 @@ export type DashboardData = {
     body: string;
     created_at: string;
   }[];
+};
+
+export type AcquisitionStage =
+  | "opportunity"
+  | "contacted"
+  | "quoted"
+  | "first_clean_booked"
+  | "recurring_follow_up"
+  | "onboarded"
+  | "closed";
+export type AcquisitionLead = {
+  id: string;
+  customer_id: string | null;
+  name: string;
+  email: string;
+  phone: string;
+  postcode: string;
+  source: "website" | "manual" | "existing";
+  stage: AcquisitionStage;
+  stage_before_booking: "opportunity" | "contacted" | "quoted" | null;
+  first_visit_id: string | null;
+  first_clean_on: string | null;
+  follow_up_due_on: string | null;
+  next_contact_on: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+export type AcquisitionHistory = {
+  id: string;
+  lead_id: string;
+  from_stage: AcquisitionStage | null;
+  to_stage: AcquisitionStage;
+  reason:
+    | "intake"
+    | "manual"
+    | "booking"
+    | "date"
+    | "cancelled"
+    | "linked"
+    | "import";
+  note: string;
+  actor_id: string | null;
+  created_at: string;
 };

@@ -17,12 +17,14 @@ export function OperationForm({
   children,
   onSaved,
   label = "Save changes",
+  disabled = false,
 }: {
   action: string;
   map: (f: FormData) => unknown;
   children: ReactNode;
-  onSaved: () => Promise<void> | void;
+  onSaved: (result?: { id?: string }) => Promise<void> | void;
   label?: string;
+  disabled?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -36,9 +38,12 @@ export function OperationForm({
         setError("");
         setSuccess(false);
         try {
-          await sendOperation(action, map(new FormData(event.currentTarget)));
+          const result = await sendOperation(
+            action,
+            map(new FormData(event.currentTarget)),
+          );
           setSuccess(true);
-          await onSaved();
+          await onSaved(result);
         } catch (e) {
           setError(e instanceof Error ? e.message : "The request failed.");
         } finally {
@@ -57,7 +62,7 @@ export function OperationForm({
           Saved successfully.
         </p>
       )}
-      <Button type="submit" disabled={busy}>
+      <Button type="submit" disabled={busy || disabled}>
         {busy ? "Saving…" : label}
       </Button>
     </form>

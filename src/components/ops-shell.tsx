@@ -9,10 +9,12 @@ import {
   ArrowUpRight,
   Repeat2,
   Banknote,
+  GitBranch,
 } from "lucide-react";
 import type { Actor } from "@/lib/models";
 const links = [
   ["", "Overview", LayoutDashboard],
+  ["pipeline", "Customer pipeline", GitBranch],
   ["customers", "Customers", Users],
   ["calendar", "Calendar", CalendarDays],
   ["recurring", "Recurring bookings", Repeat2],
