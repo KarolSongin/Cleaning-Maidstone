@@ -6,6 +6,7 @@ import luxonPlugin from "@fullcalendar/luxon3";
 import { useState } from "react";
 import type { CleanerJob } from "@/lib/models";
 import { londonDate } from "@/lib/scheduling";
+import { PersonName } from "./person-name";
 export default function CleanerCalendar({
   jobs,
   onSelect,
@@ -81,6 +82,14 @@ export default function CleanerCalendar({
                 job.status,
             );
         }}
+        eventContent={(info) => (
+          <div className="calendar-event-names">
+            {info.timeText && (
+              <span className="calendar-event-time">{info.timeText}</span>
+            )}
+            <PersonName kind="customer">{info.event.title}</PersonName>
+          </div>
+        )}
         eventClick={(info) => {
           info.jsEvent.preventDefault();
           const job = jobs.find((j) => j.id === info.event.id);

@@ -1,4 +1,5 @@
 "use client";
+import { PersonName } from "./person-name";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -96,7 +97,7 @@ export function AdminPipeline({
       aria-pressed={selectedId === item.id}
     >
       <span className="pipeline-card-name">
-        {item.name}
+        <PersonName kind="customer">{item.name}</PersonName>
         <ArrowUpRight size={14} aria-hidden="true" />
       </span>
       <span className="pipeline-card-source">
@@ -296,7 +297,7 @@ export function AdminPipeline({
                   {stageLabel(lead.stage)}
                 </span>
                 <h2 id="pipeline-detail-title" tabIndex={-1}>
-                  {lead.name}
+                  <PersonName kind="customer">{lead.name}</PersonName>
                 </h2>
                 <p>
                   {sourceLabel(lead.source)} · Added{" "}
@@ -509,7 +510,13 @@ function OpportunityForm({
         ...(lead ? { id: lead.id } : {}),
       })}
     >
-      <Field name="name" label="Opportunity name" value={lead?.name} required />
+      <Field
+        name="name"
+        label="Opportunity name"
+        value={lead?.name}
+        personKind="customer"
+        required
+      />
       <div className="form-grid">
         <Field name="email" label="Email" type="email" value={lead?.email} />
         <Field name="phone" label="Phone" value={lead?.phone} />
@@ -633,6 +640,7 @@ function CustomerLink({
         Customer profile
         <select
           value={existingId}
+          className="person-input-customer"
           onChange={(e) => setExistingId(e.target.value)}
         >
           <option value="">Create a new customer profile</option>
@@ -655,14 +663,16 @@ function CustomerLink({
       >
         {existing ? (
           <p>
-            {existing.name} · {existing.address} · {existing.postcode}. Their
-            existing pipeline stage and home details will be kept.
+            <PersonName kind="customer">{existing.name}</PersonName> ·{" "}
+            {existing.address} · {existing.postcode}. Their existing pipeline
+            stage and home details will be kept.
           </p>
         ) : (
           <>
             <Field
               name="name"
               label="Customer name"
+              personKind="customer"
               value={lead.name}
               required
             />

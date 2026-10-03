@@ -1,4 +1,5 @@
 "use client";
+import { PersonName } from "./person-name";
 import { useState } from "react";
 import Link from "next/link";
 import type { DashboardData } from "@/lib/models";
@@ -138,10 +139,17 @@ export function RecurringBookings({
               >
                 <div className="recurring-booking-heading">
                   <div>
-                    <h3>{customer?.name || "Customer"}</h3>
+                    <h3>
+                      <PersonName kind="customer">
+                        {customer?.name || "Customer"}
+                      </PersonName>
+                    </h3>
                     <p>
-                      {customer?.postcode} · {cleaner?.name || "Cleaner"} ·{" "}
-                      {series.local_time.slice(0, 5)} London time
+                      {customer?.postcode} ·{" "}
+                      <PersonName kind="cleaner">
+                        {cleaner?.name || "Cleaner"}
+                      </PersonName>{" "}
+                      · {series.local_time.slice(0, 5)} London time
                     </p>
                   </div>
                   <span className={`badge badge-${status}`}>
@@ -214,8 +222,11 @@ export function RecurringBookings({
                     aria-label={`Follow up with ${customer?.name || "customer"}`}
                   >
                     <p>
-                      Contact {customer?.name || "the customer"} to discuss
-                      continuing their regular cleaning.
+                      Contact{" "}
+                      <PersonName kind="customer">
+                        {customer?.name || "the customer"}
+                      </PersonName>{" "}
+                      to discuss continuing their regular cleaning.
                     </p>
                     <div className="recurring-contact-links">
                       {customer?.phone && (

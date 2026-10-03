@@ -1,6 +1,7 @@
 "use client";
 import { useState, type ReactNode } from "react";
 import { Button } from "./ui/button";
+import type { PersonKind } from "./person-name";
 export async function sendOperation(action: string, data: unknown) {
   const response = await fetch("/api/operations/", {
     method: "POST",
@@ -74,17 +75,25 @@ export function Field({
   type = "text",
   value = "",
   required = false,
+  personKind,
 }: {
   name: string;
   label: string;
   type?: string;
   value?: string | number;
   required?: boolean;
+  personKind?: PersonKind;
 }) {
   return (
     <label>
       {label}
-      <input name={name} type={type} defaultValue={value} required={required} />
+      <input
+        className={personKind ? `person-input-${personKind}` : undefined}
+        name={name}
+        type={type}
+        defaultValue={value}
+        required={required}
+      />
     </label>
   );
 }

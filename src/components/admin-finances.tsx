@@ -1,4 +1,5 @@
 "use client";
+import { PersonName } from "./person-name";
 import { useMemo, useState } from "react";
 import {
   ArrowDownToLine,
@@ -181,6 +182,7 @@ export function AdminFinances({
             Customer
             <select
               value={customerId}
+              className="person-input-customer"
               onChange={(event) => {
                 setCustomer(event.target.value);
                 setPage(1);
@@ -200,6 +202,7 @@ export function AdminFinances({
             Cleaner
             <select
               value={cleanerId}
+              className="person-input-cleaner"
               onChange={(event) => {
                 setCleaner(event.target.value);
                 setPage(1);
@@ -479,7 +482,7 @@ export function AdminFinances({
                             setPage(1);
                           }}
                         >
-                          {group.name}
+                          <PersonName kind={groupBy}>{group.name}</PersonName>
                           <ArrowUpRight size={12} />
                         </button>
                       </th>
@@ -597,8 +600,14 @@ export function AdminFinances({
                         </small>
                       </td>
                       <td>
-                        <strong>{row.customer}</strong>
-                        <small>{row.cleaner}</small>
+                        <strong>
+                          <PersonName kind="customer">
+                            {row.customer}
+                          </PersonName>
+                        </strong>
+                        <small>
+                          <PersonName kind="cleaner">{row.cleaner}</PersonName>
+                        </small>
                       </td>
                       <td>
                         <span className={`badge badge-finance-${row.phase}`}>
@@ -674,8 +683,11 @@ export function AdminFinances({
               >
                 <div className="financial-panel-heading">
                   <p>
-                    <strong>{edited.customer}</strong> ·{" "}
-                    {calendarDate(edited.date)} · {edited.cleaner}
+                    <strong>
+                      <PersonName kind="customer">{edited.customer}</PersonName>
+                    </strong>{" "}
+                    · {calendarDate(edited.date)} ·{" "}
+                    <PersonName kind="cleaner">{edited.cleaner}</PersonName>
                   </p>
                   <Button
                     variant="ghost"

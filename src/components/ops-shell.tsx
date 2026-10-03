@@ -1,28 +1,8 @@
 import Link from "next/link";
-import {
-  LayoutDashboard,
-  Users,
-  CalendarDays,
-  Phone,
-  FileText,
-  UserRound,
-  ArrowUpRight,
-  Repeat2,
-  Banknote,
-  GitBranch,
-} from "lucide-react";
+import { CalendarDays, ArrowUpRight } from "lucide-react";
 import type { Actor } from "@/lib/models";
-const links = [
-  ["", "Overview", LayoutDashboard],
-  ["pipeline", "Customer pipeline", GitBranch],
-  ["customers", "Customers", Users],
-  ["calendar", "Calendar", CalendarDays],
-  ["recurring", "Recurring bookings", Repeat2],
-  ["finances", "Finances", Banknote],
-  ["cleaners", "Cleaners", UserRound],
-  ["conversations", "Conversations", Phone],
-  ["content", "Content", FileText],
-] as const;
+import { AdminNavigation } from "./admin-navigation";
+import { PersonName } from "./person-name";
 export function OpsShell({
   actor,
   children,
@@ -48,12 +28,7 @@ export function OpsShell({
         </Link>
         <nav aria-label="Workspace navigation">
           {actor.role === "admin" ? (
-            links.map(([path, label, Icon]) => (
-              <Link key={path} href={"/admin/" + (path ? path + "/" : "")}>
-                <Icon size={17} />
-                {label}
-              </Link>
-            ))
+            <AdminNavigation />
           ) : (
             <Link href="/cleaner/">
               <CalendarDays size={17} />
@@ -71,7 +46,14 @@ export function OpsShell({
       </aside>
       <div className="ops-main">
         <header className="ops-topbar">
-          <p>Hello, {actor.name}</p>
+          <p>
+            Hello,{" "}
+            {actor.role === "cleaner" ? (
+              <PersonName kind="cleaner">{actor.name}</PersonName>
+            ) : (
+              actor.name
+            )}
+          </p>
           <span>
             Europe/London · {actor.role === "admin" ? "Admin" : "Cleaner"}
           </span>

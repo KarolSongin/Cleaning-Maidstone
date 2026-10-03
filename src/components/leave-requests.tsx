@@ -1,4 +1,5 @@
 "use client";
+import { PersonName } from "./person-name";
 import Link from "next/link";
 import { useState } from "react";
 import type { DashboardData, Visit } from "@/lib/models";
@@ -52,7 +53,11 @@ export function LeaveRequests({
             >
               <header className="leave-request-heading">
                 <div>
-                  <h3>{cleaner?.name ?? "Cleaner"}</h3>
+                  <h3>
+                    <PersonName kind="cleaner">
+                      {cleaner?.name ?? "Cleaner"}
+                    </PersonName>
+                  </h3>
                   <p>
                     {request.starts_on && calendarDate(request.starts_on)} –{" "}
                     {request.ends_on && calendarDate(request.ends_on)}
@@ -177,7 +182,11 @@ function CoverVisit({
       aria-label={`Clean for ${customer?.name ?? "Customer"} on ${londonDate(visit.starts_at, { year: "numeric" })}`}
     >
       <div className="leave-cover-details">
-        <strong>{customer?.name ?? "Customer"}</strong>
+        <strong>
+          <PersonName kind="customer">
+            {customer?.name ?? "Customer"}
+          </PersonName>
+        </strong>
         <span>
           {londonDate(visit.starts_at, { weekday: "short", year: "numeric" })} ·{" "}
           {time.format(new Date(visit.starts_at))}–
@@ -255,6 +264,7 @@ function CoverVisit({
             <label>
               Cover cleaner
               <select
+                className="person-input-cleaner"
                 key={alternatives.map((c) => c.id).join(":")}
                 name="cleaner_id"
                 defaultValue=""

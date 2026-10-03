@@ -11,6 +11,7 @@ import type { DashboardData, Visit } from "@/lib/models";
 import { freeAvailabilityBands, availabilityColour } from "@/lib/availability";
 import { londonDate } from "@/lib/scheduling";
 import { sendOperation } from "./operation-form";
+import { PersonName } from "./person-name";
 
 type CalendarRange = { start: string; end: string; view: string };
 export default function CalendarBoard({
@@ -82,6 +83,12 @@ export default function CalendarBoard({
         start: v.starts_at,
         end: v.ends_at,
         backgroundColor: v.status === "completed" ? "#6d8b72" : "#37687b",
+        extendedProps: {
+          customerName:
+            data.customers.find((c) => c.id === v.customer_id)?.name ||
+            "Customer",
+          cleanerName: cleanerNames([v.cleaner_id]),
+        },
       })),
   ];
   const selectedHours = data.availability.filter((slot) =>
@@ -168,6 +175,23 @@ export default function CalendarBoard({
           );
         }}
         events={events}
+        eventContent={(info) =>
+          info.event.display === "background" ? null : (
+            <div className="calendar-event-names">
+              {info.timeText && (
+                <span className="calendar-event-time">{info.timeText}</span>
+              )}
+              <PersonName kind="customer">
+                {info.event.extendedProps.customerName}
+              </PersonName>
+              {cleanerIds.length > 1 && (
+                <PersonName kind="cleaner">
+                  {info.event.extendedProps.cleanerName}
+                </PersonName>
+              )}
+            </div>
+          )
+        }
         eventDidMount={(info) => {
           info.el.title = info.event.title;
           if (info.event.display === "background")
@@ -219,7 +243,13 @@ export default function CalendarBoard({
                     minute: "2-digit",
                   }).format(new Date(band.end))}
                 </strong>
-                <small>{cleanerNames(band.cleanerIds)}</small>
+                <small className="person-names">
+                  {band.cleanerIds.map((id) => (
+                    <PersonName key={id} kind="cleaner">
+                      {cleanerNames([id])}
+                    </PersonName>
+                  ))}
+                </small>
               </div>
               <span className="free-count">{band.count} free</span>
             </li>

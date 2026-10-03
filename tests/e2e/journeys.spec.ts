@@ -114,6 +114,13 @@ test("cleaner calendar shows assigned jobs and denies rota changes", async ({
   await login(page, "cleaner");
   const before = await (await page.request.get("/api/operations/")).json();
   expect(before.jobs.length).toBeGreaterThan(0);
+  await expect(page.locator(".ops-topbar .person-name-cleaner")).toHaveCSS(
+    "background-color",
+    "rgb(247, 214, 226)",
+  );
+  await expect(
+    page.locator(".job-card .person-name-customer").first(),
+  ).toHaveCSS("background-color", "rgb(248, 229, 172)");
   await page
     .getByRole("button", { name: "Calendar view", exact: true })
     .click();
@@ -124,6 +131,10 @@ test("cleaner calendar shows assigned jobs and denies rota changes", async ({
   await page.getByRole("button", { name: "Month", exact: true }).click();
   const event = page.locator(".cleaner-calendar .fc-event").first();
   await expect(event).toBeVisible();
+  await expect(event.locator(".person-name-customer")).toHaveCSS(
+    "background-color",
+    "rgb(248, 229, 172)",
+  );
   await event.focus();
   await page.keyboard.press("Enter");
   const detail = page.getByRole("region", { name: "Assigned visit" });
@@ -241,15 +252,28 @@ test("customer changes and overlapping scheduling requests persist", async ({
     (c: { name: string }) => c.name === name,
   );
   expect(customer).toBeTruthy();
-  const offset = Math.floor(Date.now() / 1000) % 10000;
-  const date = new Date(Date.UTC(2030, 0, 1 + offset))
-    .toISOString()
-    .slice(0, 10);
+  // Isolate the overlap check from hours/leave changed by other journeys.
+  const project = test.info().project.name;
+  const invite = await page.request.post("/api/cleaners/invite/", {
+    headers: { origin },
+    data: {
+      name: `Overlap Cleaner ${project}`,
+      email: `overlap-${project}@example.test`,
+      availability: Array.from({ length: 7 }, (_, weekday) => ({
+        weekday,
+        start_time: "08:00",
+        end_time: "18:00",
+      })),
+    },
+  });
+  expect(invite.status()).toBe(200);
+  const cleanerId = (await invite.json()).id;
+  const date = project === "desktop" ? "2039-06-01" : "2040-06-01";
   const booking = {
     action: "booking",
     data: {
       customer_id: customer.id,
-      cleaner_id: data.cleaners[0].id,
+      cleaner_id: cleanerId,
       date,
       time: "09:00",
       customer_rate_pence: 1800,
@@ -1980,6 +2004,13 @@ test("time-off requests list every affected clean and can be approved after cove
   });
   await expect(card).toContainText(`Family holiday ${project}`);
   await expect(card).toContainText("3 cleans need cover");
+  await expect(card.locator("h3 .person-name-cleaner")).toHaveCSS(
+    "background-color",
+    "rgb(247, 214, 226)",
+  );
+  await expect(
+    card.locator(".leave-cover-visit .person-name-customer").first(),
+  ).toHaveCSS("background-color", "rgb(248, 229, 172)");
   await expect(card.locator(".leave-cover-visit")).toHaveCount(3);
   await expect(card.getByText("Recurring visit", { exact: true })).toHaveCount(
     2,

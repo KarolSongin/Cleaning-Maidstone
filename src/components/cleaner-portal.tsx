@@ -1,4 +1,5 @@
 "use client";
+import { PersonName } from "./person-name";
 import { money } from "@/lib/finances";
 import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
@@ -134,7 +135,8 @@ export function CleanerPortal({
             .filter((j) => j.status === "completed")
             .map((j) => (
               <p key={j.id}>
-                {j.customer_name} · {londonDate(j.starts_at)}
+                <PersonName kind="customer">{j.customer_name}</PersonName> ·{" "}
+                {londonDate(j.starts_at)}
               </p>
             ))}
         </details>
@@ -163,7 +165,9 @@ function JobCard({
   return (
     <article className="job-card">
       <span className="badge">{job.status}</span>
-      <h2>{job.customer_name}</h2>
+      <h2>
+        <PersonName kind="customer">{job.customer_name}</PersonName>
+      </h2>
       <p className="job-time">
         {londonDate(job.starts_at, {
           weekday: "long",

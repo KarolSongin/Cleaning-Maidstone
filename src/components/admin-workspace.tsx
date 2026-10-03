@@ -29,6 +29,8 @@ import { stageLabel, contactIsDue } from "@/lib/acquisition";
 import { BookingForm } from "./booking-form";
 import { RecurringBookings } from "./recurring-bookings";
 import { recurringSummaries, londonToday } from "@/lib/recurring-bookings";
+import { useAdminAttention } from "./admin-navigation";
+import { PersonName } from "./person-name";
 const CalendarBoard = dynamic(() => import("./calendar-board"), {
   ssr: false,
   loading: () => <p className="empty-state">Loading calendar…</p>,
@@ -90,6 +92,10 @@ export function AdminWorkspace({
   const [data, setData] = useState(initialData);
   const [today, setToday] = useState(initialToday);
   const [asOf, setAsOf] = useState(initialNow);
+  const publishAttention = useAdminAttention()?.publish;
+  useEffect(() => {
+    publishAttention?.(data, asOf);
+  }, [data, asOf, publishAttention]);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [selectedCustomer, setCustomer] = useState<Customer | undefined>(() =>
@@ -265,9 +271,16 @@ export function AdminWorkspace({
                 {upcoming.slice(0, 8).map((v) => (
                   <li key={v.id}>
                     <div>
-                      <strong>{customerName(v.customer_id)}</strong>
+                      <strong>
+                        <PersonName kind="customer">
+                          {customerName(v.customer_id)}
+                        </PersonName>
+                      </strong>
                       <small>
-                        {dateTime(v.starts_at)} · {cleanerName(v.cleaner_id)}
+                        {dateTime(v.starts_at)} ·{" "}
+                        <PersonName kind="cleaner">
+                          {cleanerName(v.cleaner_id)}
+                        </PersonName>
                       </small>
                     </div>
                     <span className="badge">{v.status}</span>
@@ -382,7 +395,9 @@ export function AdminWorkspace({
                       )
                       .map((c) => (
                         <tr key={c.id}>
-                          <td>{c.name}</td>
+                          <td>
+                            <PersonName kind="customer">{c.name}</PersonName>
+                          </td>
                           <td>
                             {c.phone}
                             <small>{c.email}</small>
@@ -420,7 +435,8 @@ export function AdminWorkspace({
                   <li key={e.id}>
                     <div>
                       <strong>
-                        {e.name} · {e.postcode}
+                        <PersonName kind="customer">{e.name}</PersonName> ·{" "}
+                        {e.postcode}
                       </strong>
                       <small>
                         {e.frequency} · {e.home_size} ·{" "}
@@ -474,6 +490,7 @@ export function AdminWorkspace({
                 <Field
                   name="name"
                   label="Customer name"
+                  personKind="customer"
                   value={selectedCustomer?.name}
                   required
                 />
@@ -540,7 +557,7 @@ export function AdminWorkspace({
                       )
                     }
                   />
-                  {c.name}
+                  <PersonName kind="cleaner">{c.name}</PersonName>
                   {!c.active && " (inactive)"}
                 </label>
               ))}
@@ -584,8 +601,13 @@ export function AdminWorkspace({
               {selectedVisit ? (
                 <>
                   <p>
-                    {customerName(selectedVisit.customer_id)} ·{" "}
-                    {cleanerName(selectedVisit.cleaner_id)}
+                    <PersonName kind="customer">
+                      {customerName(selectedVisit.customer_id)}
+                    </PersonName>{" "}
+                    ·{" "}
+                    <PersonName kind="cleaner">
+                      {cleanerName(selectedVisit.cleaner_id)}
+                    </PersonName>
                     <br />
                     {dateTime(selectedVisit.starts_at)}
                   </p>
@@ -628,6 +650,7 @@ export function AdminWorkspace({
                       Assigned cleaner
                       <select
                         name="cleaner_id"
+                        className="person-input-cleaner"
                         defaultValue={selectedVisit.cleaner_id}
                       >
                         {data.cleaners.map((c) => (
@@ -671,7 +694,10 @@ export function AdminWorkspace({
                         className="button button-ghost button-sm"
                         onClick={() => setVisit(v)}
                       >
-                        {customerName(v.customer_id)} · {dateTime(v.starts_at)}
+                        <PersonName kind="customer">
+                          {customerName(v.customer_id)}
+                        </PersonName>{" "}
+                        · {dateTime(v.starts_at)}
                       </button>
                       <span className={"badge badge-" + v.status}>
                         {v.status}
@@ -699,7 +725,9 @@ export function AdminWorkspace({
                 {data.cleaners.map((c) => (
                   <li key={c.id}>
                     <div>
-                      <strong>{c.name}</strong>
+                      <strong>
+                        <PersonName kind="cleaner">{c.name}</PersonName>
+                      </strong>
                       <small>{c.active ? "Active" : "Inactive"}</small>
                       <WeeklyAvailabilitySummary
                         slots={data.availability.filter(
@@ -733,7 +761,10 @@ export function AdminWorkspace({
               aria-label={`Edit weekly availability for ${editingCleaner.name}`}
             >
               <div className="weekly-edit-heading">
-                <h2>Weekly availability · {editingCleaner.name}</h2>
+                <h2>
+                  Weekly availability ·{" "}
+                  <PersonName kind="cleaner">{editingCleaner.name}</PersonName>
+                </h2>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -767,7 +798,10 @@ export function AdminWorkspace({
                   <li key={r.id}>
                     <div>
                       <strong>
-                        {cleanerName(r.cleaner_id)} · {r.kind}
+                        <PersonName kind="cleaner">
+                          {cleanerName(r.cleaner_id)}
+                        </PersonName>{" "}
+                        · {r.kind}
                       </strong>
                       <small>
                         {`${["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][r.weekday!]} ${r.start_time}–${r.end_time}`}
@@ -925,9 +959,22 @@ export function AdminWorkspace({
                       </p>
                       <p>
                         Suggested customer:{" "}
-                        {customerName(c.suggested_customer_id)}
+                        {c.suggested_customer_id ? (
+                          <PersonName kind="customer">
+                            {customerName(c.suggested_customer_id)}
+                          </PersonName>
+                        ) : (
+                          "Unmatched"
+                        )}
                         <br />
-                        Confirmed customer: {customerName(c.customer_id)}
+                        Confirmed customer:{" "}
+                        {c.customer_id ? (
+                          <PersonName kind="customer">
+                            {customerName(c.customer_id)}
+                          </PersonName>
+                        ) : (
+                          "Unmatched"
+                        )}
                       </p>
                       <OperationForm
                         action="conversation"
@@ -943,6 +990,7 @@ export function AdminWorkspace({
                           Confirm customer
                           <select
                             name="customer_id"
+                            className="person-input-customer"
                             defaultValue={c.customer_id || ""}
                           >
                             <option value="">Unmatched / shared number</option>
@@ -1095,7 +1143,7 @@ function InviteForm({
         }
       }}
     >
-      <Field name="name" label="Name" required />
+      <Field name="name" label="Name" personKind="cleaner" required />
       <Field name="email" label="Email" type="email" required />
       <WeeklyAvailabilityEditor
         value={availability}

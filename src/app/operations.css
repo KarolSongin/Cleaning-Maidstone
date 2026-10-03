@@ -42,6 +42,28 @@
 .ops-sidebar nav a:hover {
   background: #31556a;
 }
+.ops-sidebar nav a[aria-current="page"] {
+  background: #31556a;
+}
+.ops-sidebar nav svg {
+  flex-shrink: 0;
+}
+.nav-attention {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 4px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: #c82e45;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
 .ops-sidebar form {
   margin-top: auto;
 }
@@ -1756,4 +1778,58 @@ td small {
     flex-direction: column;
     align-items: start;
   }
+}
+
+/* One visual identity for each person, including calendar events and native controls. */
+.ops-layout .person-name {
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: inherit;
+  font-weight: 600;
+  line-height: 1.4;
+  vertical-align: baseline;
+  overflow-wrap: anywhere;
+}
+.ops-layout .person-name-cleaner,
+.ops-layout input.person-input-cleaner,
+.ops-layout select.person-input-cleaner,
+.ops-layout select.person-input-cleaner option {
+  background: #f7d6e2;
+  border-color: #ebadc4;
+  color: #742a4b;
+}
+.ops-layout .person-name-customer,
+.ops-layout input.person-input-customer,
+.ops-layout select.person-input-customer,
+.ops-layout select.person-input-customer option {
+  background: #f8e5ac;
+  border-color: #e6c769;
+  color: #614514;
+}
+.ops-layout .person-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+.calendar-event-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 4px;
+  min-width: 0;
+  padding: 1px 2px;
+  overflow: hidden;
+  font-size: 11px;
+}
+.calendar-event-time {
+  font-weight: 600;
+}
+.ops-layout .calendar-event-names .person-name {
+  padding: 0 4px;
+  border-radius: 3px;
+  line-height: 1.3;
 }

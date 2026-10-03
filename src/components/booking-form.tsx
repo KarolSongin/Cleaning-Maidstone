@@ -54,7 +54,12 @@ export function BookingForm({
       <div className="form-grid">
         <label>
           Customer
-          <select name="customer_id" required defaultValue={customerId ?? ""}>
+          <select
+            className="person-input-customer"
+            name="customer_id"
+            required
+            defaultValue={customerId ?? ""}
+          >
             <option value="">Select customer</option>
             {data.customers
               .filter((c) => !customerId || c.id === customerId)
@@ -67,7 +72,7 @@ export function BookingForm({
         </label>
         <label>
           Cleaner
-          <select name="cleaner_id" required>
+          <select className="person-input-cleaner" name="cleaner_id" required>
             <option value="">Select cleaner</option>
             {data.cleaners
               .filter((c) => c.active)
