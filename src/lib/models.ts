@@ -29,6 +29,12 @@ export type Customer = {
   internal_notes: string;
 };
 export type Cleaner = { id: string; name: string; active: boolean };
+export type WeeklyAvailability = {
+  weekday: number;
+  start_time: string;
+  end_time: string;
+};
+export type CleanerAvailability = WeeklyAvailability & { cleaner_id: string };
 export type Visit = {
   id: string;
   customer_id: string;
@@ -104,12 +110,7 @@ export type DashboardData = {
   content: Content[];
   leave_requests: RequestRecord[];
   availability_requests: RequestRecord[];
-  availability: {
-    cleaner_id: string;
-    weekday: number;
-    start_time: string;
-    end_time: string;
-  }[];
+  availability: CleanerAvailability[];
   recordings: {
     id: string;
     conversation_id: string;

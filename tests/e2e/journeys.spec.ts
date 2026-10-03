@@ -471,3 +471,262 @@ test("sample events deduplicate and expose transcription failure honestly", asyn
     ).status,
   ).toBe("completed");
 });
+
+test("admin sets recurring hours and sees free capacity for selected cleaners", async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await login(page, "admin");
+  await page.goto("/admin/cleaners/");
+  const invitation = page.locator("section.panel").filter({
+    has: page.getByRole("heading", { name: "Invite a cleaner", exact: true }),
+  });
+  const name = `Weekly ${test.info().project.name} Cleaner`;
+  await invitation.getByLabel("Name", { exact: true }).fill(name);
+  await invitation
+    .getByLabel("Email", { exact: true })
+    .fill(`weekly-${test.info().project.name}@example.test`);
+  await invitation
+    .getByRole("button", { name: "Create synthetic profile", exact: true })
+    .click();
+  await expect(invitation.getByRole("alert")).toContainText(
+    "Choose at least one working day",
+  );
+  await invitation
+    .getByRole("checkbox", { name: "Monday", exact: true })
+    .check();
+  await invitation.getByLabel("Monday end time", { exact: true }).fill("12:00");
+  await invitation
+    .getByRole("button", { name: "+ Add Monday period", exact: true })
+    .click();
+  await invitation
+    .getByLabel("Monday start time 2", { exact: true })
+    .fill("13:00");
+  await invitation
+    .getByLabel("Monday end time 2", { exact: true })
+    .fill("17:00");
+  await invitation
+    .getByRole("checkbox", { name: "Tuesday", exact: true })
+    .check();
+  await invitation
+    .getByLabel("Tuesday start time", { exact: true })
+    .fill("10:00");
+  await invitation
+    .getByLabel("Tuesday end time", { exact: true })
+    .fill("14:00");
+  await invitation
+    .getByRole("button", { name: "Create synthetic profile", exact: true })
+    .click();
+  await expect(invitation.getByRole("status")).toContainText("profile created");
+  let data = await (await page.request.get("/api/operations/")).json();
+  const cleaner = data.cleaners.find((c: { name: string }) => c.name === name);
+  expect(cleaner).toBeTruthy();
+  const hours = () =>
+    data.availability
+      .filter((a: { cleaner_id: string }) => a.cleaner_id === cleaner.id)
+      .map((a: { weekday: number; start_time: string; end_time: string }) => [
+        a.weekday,
+        a.start_time.slice(0, 5),
+        a.end_time.slice(0, 5),
+      ])
+      .sort();
+  expect(hours()).toEqual([
+    [1, "08:00", "12:00"],
+    [1, "13:00", "17:00"],
+    [2, "10:00", "14:00"],
+  ]);
+  await page
+    .getByRole("button", { name: `Edit hours for ${name}`, exact: true })
+    .click();
+  const editor = page.getByRole("region", {
+    name: `Edit weekly availability for ${name}`,
+  });
+  await editor.getByLabel("Tuesday end time", { exact: true }).fill("15:00");
+  await editor
+    .getByRole("button", { name: "Save weekly availability", exact: true })
+    .click();
+  await expect(editor).toHaveCount(0);
+  data = await (await page.request.get("/api/operations/")).json();
+  expect(hours()).toContainEqual([2, "10:00", "15:00"]);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: `test-results/weekly-hours-${test.info().project.name}.png`,
+    fullPage: true,
+  });
+
+  const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Europe/London",
+  });
+  const day = new Date(today + "T12:00:00Z");
+  day.setUTCDate(day.getUTCDate() + ((8 - day.getUTCDay()) % 7 || 7));
+  const booking = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "booking",
+      data: {
+        customer_id: data.customers[0].id,
+        cleaner_id: cleaner.id,
+        date: day.toISOString().slice(0, 10),
+        time: "09:00",
+        duration_minutes: 120,
+        interval_weeks: 0,
+        occurrences: 1,
+      },
+    },
+  });
+  expect(booking.status()).toBe(200);
+  await page.goto("/admin/calendar/");
+  await page
+    .getByRole("button", { name: "Clear selection", exact: true })
+    .click();
+  await page
+    .getByRole("checkbox", { name: `Show ${name}`, exact: true })
+    .check();
+  await page.locator(".fc-next-button").click();
+  await expect(
+    page.locator('.availability-band[data-free-count="1"]').first(),
+  ).toBeVisible();
+  await expect(
+    page.locator('.availability-band[data-free-count="2"]'),
+  ).toHaveCount(0);
+  await expect(
+    page.locator(".fc-event-main").filter({ hasText: data.customers[0].name }),
+  ).toBeVisible();
+  await page
+    .getByRole("checkbox", { name: "Show Taylor Reed", exact: true })
+    .check();
+  await expect(
+    page.locator('.availability-band[data-free-count="2"]').first(),
+  ).toBeVisible();
+  const lighter = await page
+    .locator('.availability-band[data-free-count="1"]')
+    .first()
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  const deeper = await page
+    .locator('.availability-band[data-free-count="2"]')
+    .first()
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(lighter).not.toBe(deeper);
+  await page.locator(".availability-slots summary").click();
+  await expect(page.locator(".availability-slots")).toContainText("2 free");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: `test-results/free-calendar-${test.info().project.name}.png`,
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Month", exact: true }).click();
+  await expect(page.locator(".calendar-availability-note")).toContainText(
+    "Month shows the highest number",
+  );
+  await expect(page.locator(".availability-band").first()).toBeVisible();
+  await page
+    .getByRole("button", { name: "Clear selection", exact: true })
+    .click();
+  await expect(page.locator(".availability-band")).toHaveCount(0);
+
+  await page.goto("/admin/cleaners/");
+  await page
+    .getByRole("button", { name: `Edit hours for ${name}`, exact: true })
+    .click();
+  await editor.getByLabel("Monday end time", { exact: true }).fill("10:00");
+  await editor
+    .getByRole("button", { name: "Save weekly availability", exact: true })
+    .click();
+  await expect(editor.getByRole("alert")).toContainText(
+    "Move conflicting upcoming visits",
+  );
+  data = await (await page.request.get("/api/operations/")).json();
+  expect(hours()).toContainEqual([1, "08:00", "12:00"]);
+  expect(errors).toEqual([]);
+});
+
+test("cleaner sees approved weekly hours and can only request a change", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await login(page, "cleaner");
+  const before = await (await page.request.get("/api/operations/")).json();
+  expect(before.recurringAvailability.length).toBe(7);
+  expect(
+    new Set(
+      before.recurringAvailability.map(
+        (a: { cleaner_id: string }) => a.cleaner_id,
+      ),
+    ),
+  ).toEqual(new Set(["22222222-2222-4222-8222-222222222222"]));
+  const summary = page.getByRole("region", {
+    name: "Your weekly availability",
+    exact: true,
+  });
+  await expect(summary).toContainText("08:00–20:00");
+  await expect(summary.locator("input,select,button")).toHaveCount(0);
+  const denied = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "cleaner_availability",
+      data: {
+        cleaner_id: "22222222-2222-4222-8222-222222222222",
+        availability: [],
+      },
+    },
+  });
+  expect(denied.status()).toBe(403);
+  const inviteDenied = await page.request.post("/api/cleaners/invite/", {
+    headers: { origin },
+    data: {
+      name: "Denied Test",
+      email: "denied@example.test",
+      availability: [{ weekday: 1, start_time: "09:00", end_time: "17:00" }],
+    },
+  });
+  expect(inviteDenied.status()).toBe(403);
+  const panel = page.locator("section.panel").filter({
+    has: page.getByRole("heading", {
+      name: "Request an availability change",
+      exact: true,
+    }),
+  });
+  await panel
+    .getByRole("combobox", { name: "Day", exact: true })
+    .selectOption("1");
+  await panel.getByLabel("Available from", { exact: true }).fill("09:00");
+  await panel.getByLabel("Available until", { exact: true }).fill("17:00");
+  await panel
+    .getByRole("button", { name: "Send availability request", exact: true })
+    .click();
+  await expect(panel.getByRole("status")).toContainText("Saved successfully");
+  const after = await (await page.request.get("/api/operations/")).json();
+  expect(after.recurringAvailability).toEqual(before.recurringAvailability);
+  expect(after.availability).toContainEqual(
+    expect.objectContaining({
+      weekday: 1,
+      status: "pending",
+      start_time: "09:00:00",
+      end_time: "17:00:00",
+    }),
+  );
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  expect(errors).toEqual([]);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: `test-results/cleaner-hours-${test.info().project.name}.png`,
+    fullPage: true,
+  });
+});

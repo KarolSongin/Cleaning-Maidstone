@@ -2,11 +2,16 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { CalendarDays, List, LockKeyhole } from "lucide-react";
-import type { CleanerJob, RequestRecord } from "@/lib/models";
+import type {
+  CleanerJob,
+  RequestRecord,
+  CleanerAvailability,
+} from "@/lib/models";
 import { londonDate } from "@/lib/scheduling";
 import { Button } from "./ui/button";
 import { useLiveWorkspace } from "./use-live-workspace";
 import { OperationForm, Field, sendOperation } from "./operation-form";
+import { WeeklyAvailabilitySummary } from "./weekly-availability";
 const CleanerCalendar = dynamic(() => import("./cleaner-calendar"), {
   ssr: false,
   loading: () => <p role="status">Loading your calendar…</p>,
@@ -15,6 +20,7 @@ type Data = {
   jobs: CleanerJob[];
   leave: RequestRecord[];
   availability: RequestRecord[];
+  recurringAvailability: CleanerAvailability[];
 };
 export function CleanerPortal({
   initialData,
@@ -132,6 +138,14 @@ export function CleanerPortal({
             ))}
         </details>
       )}
+      <section className="panel" aria-label="Your weekly availability">
+        <h2>Your weekly availability</h2>
+        <p>
+          Your admin manages these hours. Request any changes below. All times
+          are London time.
+        </p>
+        <WeeklyAvailabilitySummary slots={data.recurringAvailability} />
+      </section>
       <RequestPanels data={data} refresh={refresh} />
     </div>
   );

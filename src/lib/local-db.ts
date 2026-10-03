@@ -50,6 +50,21 @@ export async function initialiseDatabase(db: PGlite, seed = false) {
         "utf8",
       ),
     );
+  const hours = await db.query<{ exists: boolean }>(
+    "select to_regprocedure('public.save_cleaner_availability(jsonb)') is not null as exists",
+  );
+  if (!hours.rows[0].exists)
+    await db.transaction(async (tx) => {
+      await tx.exec(
+        await fs.readFile(
+          path.join(
+            process.cwd(),
+            "supabase/migrations/202610030001_cleaner_availability.sql",
+          ),
+          "utf8",
+        ),
+      );
+    });
   if (!exists.rows[0].exists && seed) await seedDatabase(db);
 }
 async function seedDatabase(db: PGlite) {
@@ -113,7 +128,11 @@ export async function getLocalDb() {
     const name = process.env.DEMO_DATABASE_NAME || "database";
     if (!/^[a-zA-Z0-9_-]{1,120}$/.test(name))
       throw new Error("Use a simple local demo database name");
-    const databasePath = path.join(/* turbopackIgnore: true */ process.cwd(), ".local", name);
+    const databasePath = path.join(
+      /* turbopackIgnore: true */ process.cwd(),
+      ".local",
+      name,
+    );
     const db = new PGlite(databasePath, {
       extensions: { btree_gist },
     });

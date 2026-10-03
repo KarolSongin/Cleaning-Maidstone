@@ -14,6 +14,7 @@ import type {
   DashboardData,
   CleanerJob,
   RequestRecord,
+  CleanerAvailability,
 } from "./models";
 import type { Operation } from "./validation";
 type Table = keyof Database["public"]["Tables"];
@@ -97,6 +98,10 @@ export async function cleanerData(actor: Actor) {
     jobs: await rpc<CleanerJob[]>("cleaner_jobs", {}, actor),
     leave: await rows<RequestRecord>("leave_requests", actor),
     availability: await rows<RequestRecord>("availability_requests", actor),
+    recurringAvailability: await rows<CleanerAvailability>(
+      "availability",
+      actor,
+    ),
   };
 }
 export async function mutate(operation: Operation, actor: Actor) {
@@ -105,6 +110,8 @@ export async function mutate(operation: Operation, actor: Actor) {
     if (actor.role !== "cleaner") throw new Error("Cleaner access required");
   } else if (actor.role !== "admin") throw new Error("Admin access required");
   switch (action) {
+    case "cleaner_availability":
+      return rpc("save_cleaner_availability", { p: data }, actor);
     case "customer":
       return rpc("save_customer", { p: data }, actor);
     case "booking":

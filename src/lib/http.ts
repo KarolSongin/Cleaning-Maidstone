@@ -16,21 +16,24 @@ export function failure(error: unknown, status = 400) {
       ? error.message
       : "The request could not be completed";
   const safe =
-    message.includes("overlap") || message.includes("no_cleaner_overlap")
-      ? "This cleaner already has a visit at that time."
-      : message.includes("availability")
-        ? "This time is outside the cleaner’s availability."
-        : message.includes("leave")
-          ? message
-          : message.includes("wait before")
+    message.startsWith("Move conflicting upcoming visits") ||
+    message.startsWith("Availability periods on the same day")
+      ? message
+      : message.includes("overlap") || message.includes("no_cleaner_overlap")
+        ? "This cleaner already has a visit at that time."
+        : message.includes("availability")
+          ? "This time is outside the cleaner’s availability."
+          : message.includes("leave")
             ? message
-            : message.includes("Admin") ||
-                message.includes("access") ||
-                message.includes("allowed")
-              ? "You do not have access to this action."
-              : status >= 500
-                ? "The service is temporarily unavailable. Please try again or contact us."
-                : message;
+            : message.includes("wait before")
+              ? message
+              : message.includes("Admin") ||
+                  message.includes("access") ||
+                  message.includes("allowed")
+                ? "You do not have access to this action."
+                : status >= 500
+                  ? "The service is temporarily unavailable. Please try again or contact us."
+                  : message;
   const code =
     /Admin access required|Cleaner access required|not allowed|access denied/.test(
       message,

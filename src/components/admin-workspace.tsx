@@ -8,11 +8,18 @@ import type {
   Visit,
   Content,
   Conversation,
+  WeeklyAvailability,
+  Cleaner,
 } from "@/lib/models";
 import { londonDate, londonInstant } from "@/lib/scheduling";
 import { Button } from "./ui/button";
 import { OperationForm, Field, sendOperation } from "./operation-form";
 import { useLiveWorkspace } from "./use-live-workspace";
+import {
+  WeeklyAvailabilityEditor,
+  WeeklyAvailabilitySummary,
+} from "./weekly-availability";
+import { cleanerInviteSchema } from "@/lib/validation";
 const CalendarBoard = dynamic(() => import("./calendar-board"), {
   ssr: false,
   loading: () => <p className="empty-state">Loading calendar…</p>,
@@ -61,7 +68,13 @@ export function AdminWorkspace({
   const [error, setError] = useState("");
   const [selectedCustomer, setCustomer] = useState<Customer | undefined>();
   const [selectedVisit, setVisit] = useState<Visit | undefined>();
-  const [filter, setFilter] = useState("");
+  const [selectedCleanerIds, setSelectedCleanerIds] = useState<string[] | null>(
+    null,
+  );
+  const [editingCleanerId, setEditingCleanerId] = useState<string | null>(null);
+  const visibleCleanerIds =
+    selectedCleanerIds ?? data.cleaners.map((c) => c.id);
+  const editingCleaner = data.cleaners.find((c) => c.id === editingCleanerId);
   const [selectedContent, setContent] = useState<Content | undefined>();
   const [selectedConversation, setConversation] = useState<
     Conversation | undefined
@@ -382,25 +395,46 @@ export function AdminWorkspace({
       )}
       {section === "calendar" && (
         <>
-          <div className="search-row">
-            <label>
-              Cleaner filter
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
+          <fieldset className="calendar-cleaners">
+            <legend>Show cleaners</legend>
+            <div className="calendar-cleaner-options">
+              {data.cleaners.map((c) => (
+                <label key={c.id} className="calendar-cleaner-option">
+                  <input
+                    type="checkbox"
+                    aria-label={`Show ${c.name}`}
+                    checked={visibleCleanerIds.includes(c.id)}
+                    onChange={(e) =>
+                      setSelectedCleanerIds(
+                        e.target.checked
+                          ? [...visibleCleanerIds, c.id]
+                          : visibleCleanerIds.filter((id) => id !== c.id),
+                      )
+                    }
+                  />
+                  {c.name}
+                  {!c.active && " (inactive)"}
+                </label>
+              ))}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedCleanerIds(null)}
               >
-                <option value="">All cleaners</option>
-                {data.cleaners.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+                Select all
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedCleanerIds([])}
+              >
+                Clear selection
+              </Button>
+            </div>
+          </fieldset>
           <CalendarBoard
             data={data}
-            cleaner={filter}
+            cleanerIds={visibleCleanerIds}
             onSelect={setVisit}
             onSaved={refresh}
             onError={setError}
@@ -607,19 +641,19 @@ export function AdminWorkspace({
                     <div>
                       <strong>{c.name}</strong>
                       <small>{c.active ? "Active" : "Inactive"}</small>
-                      {data.availability
-                        .filter((a) => a.cleaner_id === c.id)
-                        .map((a) => (
-                          <small key={a.weekday}>
-                            {
-                              ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
-                                a.weekday
-                              ]
-                            }{" "}
-                            {a.start_time.slice(0, 5)}–{a.end_time.slice(0, 5)}
-                          </small>
-                        ))}
+                      <WeeklyAvailabilitySummary
+                        slots={data.availability.filter(
+                          (a) => a.cleaner_id === c.id,
+                        )}
+                      />
                     </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingCleanerId(c.id)}
+                    >
+                      Edit hours<span className="sr-only"> for {c.name}</span>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -628,12 +662,39 @@ export function AdminWorkspace({
               <h2>Invite a cleaner</h2>
               <InviteForm demo={demo} refresh={refresh} />
               <p className="form-small">
-                Live accounts are created only by an admin invitation. The
-                initial availability is Monday–Friday, 8am–8pm. Staff can
-                request changes in their portal.
+                Live accounts are created by an admin invitation. Cleaners can
+                view their approved hours and request changes in their portal.
               </p>
             </section>
           </div>
+          {editingCleaner && (
+            <section
+              className="panel"
+              aria-label={`Edit weekly availability for ${editingCleaner.name}`}
+            >
+              <div className="weekly-edit-heading">
+                <h2>Weekly availability · {editingCleaner.name}</h2>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEditingCleanerId(null)}
+                >
+                  Close hours editor
+                </Button>
+              </div>
+              <CleanerHoursForm
+                key={editingCleaner.id}
+                cleaner={editingCleaner}
+                slots={data.availability.filter(
+                  (a) => a.cleaner_id === editingCleaner.id,
+                )}
+                onSaved={async () => {
+                  await refresh();
+                  setEditingCleanerId(null);
+                }}
+              />
+            </section>
+          )}
           <section className="panel">
             <h2>Availability & leave for review</h2>
             <ul className="data-list">
@@ -937,18 +998,29 @@ function InviteForm({
 }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [availability, setAvailability] = useState<WeeklyAvailability[]>([]);
+  const [busy, setBusy] = useState(false);
   return (
     <form
       className="ops-form"
       onSubmit={async (e) => {
         e.preventDefault();
+        if (busy) return;
         setError("");
-        const form = new FormData(e.currentTarget);
+        setMessage("");
+        const element = e.currentTarget;
+        const form = new FormData(element);
         try {
+          const parsed = cleanerInviteSchema.safeParse({
+            ...Object.fromEntries(form),
+            availability,
+          });
+          if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+          setBusy(true);
           const response = await fetch("/api/cleaners/invite/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(Object.fromEntries(form)),
+            body: JSON.stringify(parsed.data),
           });
           const result = await response.json();
           if (!response.ok) throw new Error(result.error);
@@ -958,13 +1030,21 @@ function InviteForm({
               : "Invitation sent.",
           );
           await refresh();
+          element.reset();
+          setAvailability([]);
         } catch (err) {
           setError(err instanceof Error ? err.message : "Invitation failed.");
+        } finally {
+          setBusy(false);
         }
       }}
     >
       <Field name="name" label="Name" required />
       <Field name="email" label="Email" type="email" required />
+      <WeeklyAvailabilityEditor
+        value={availability}
+        onChange={setAvailability}
+      />
       {message && (
         <p className="alert" role="status">
           {message}
@@ -975,9 +1055,47 @@ function InviteForm({
           {error}
         </p>
       )}
-      <Button type="submit">
-        {demo ? "Create synthetic profile" : "Send invitation"}
+      <Button type="submit" disabled={busy}>
+        {busy
+          ? "Creating profile…"
+          : demo
+            ? "Create synthetic profile"
+            : "Send invitation"}
       </Button>
     </form>
+  );
+}
+function CleanerHoursForm({
+  cleaner,
+  slots,
+  onSaved,
+}: {
+  cleaner: Cleaner;
+  slots: WeeklyAvailability[];
+  onSaved: () => Promise<void>;
+}) {
+  const [availability, setAvailability] = useState<WeeklyAvailability[]>(() =>
+    slots.map((slot) => ({
+      weekday: slot.weekday,
+      start_time: slot.start_time.slice(0, 5),
+      end_time: slot.end_time.slice(0, 5),
+    })),
+  );
+  return (
+    <OperationForm
+      action="cleaner_availability"
+      label="Save weekly availability"
+      map={() => ({ cleaner_id: cleaner.id, availability })}
+      onSaved={onSaved}
+    >
+      <p className="form-small">
+        These hours repeat every week. Move any conflicting upcoming visits
+        before reducing the hours.
+      </p>
+      <WeeklyAvailabilityEditor
+        value={availability}
+        onChange={setAvailability}
+      />
+    </OperationForm>
   );
 }

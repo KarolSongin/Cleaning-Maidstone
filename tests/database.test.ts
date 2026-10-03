@@ -486,3 +486,176 @@ describe("durable transcription and late inbound events", () => {
     },
   );
 });
+
+describe("admin-managed weekly availability", () => {
+  const hours = [
+    { weekday: 1, start_time: "08:00", end_time: "12:00" },
+    { weekday: 1, start_time: "13:00", end_time: "17:00" },
+    { weekday: 6, start_time: "10:00", end_time: "14:00" },
+  ];
+  let counter = 0;
+  async function profile() {
+    const id = `aaaaaaaa-aaaa-4aaa-8aaa-${String(++counter).padStart(12, "0")}`;
+    await db.query(
+      "insert into auth.users(id,raw_user_meta_data) values($1,'{}')",
+      [id],
+    );
+    return id;
+  }
+  async function registered() {
+    const id = await profile();
+    await admin("select register_cleaner($1)", [
+      JSON.stringify({ id, name: "Test Weekly Cleaner", availability: hours }),
+    ]);
+    return id;
+  }
+  const readHours = (id: string) =>
+    admin<{ weekday: number; start_time: string; end_time: string }>(
+      "select weekday,to_char(start_time,'HH24:MI') as start_time,to_char(end_time,'HH24:MI') as end_time from availability where cleaner_id=$1 order by weekday,start_time",
+      [id],
+    );
+  it("creates exactly the chosen days and split periods, preserving them on restart", async () => {
+    const id = await registered();
+    expect(await readHours(id)).toEqual(hours);
+    await initialiseDatabase(db, true);
+    expect(await readHours(id)).toEqual(hours);
+    expect(
+      await cleaner<{ cleaner_id: string }>(
+        "select cleaner_id from availability",
+      ),
+    ).not.toContainEqual({ cleaner_id: id });
+  });
+  it("denies direct and RPC changes by cleaners or public callers", async () => {
+    const id = await registered();
+    const p = JSON.stringify({ cleaner_id: id, availability: hours });
+    await expect(
+      cleaner("select save_cleaner_availability($1)", [p]),
+    ).rejects.toThrow(/Admin access/);
+    await expect(
+      publicQuery("select save_cleaner_availability($1)", [p]),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      cleaner("delete from availability where cleaner_id=$1", [DEMO_CLEANER]),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      cleaner("select register_cleaner($1)", [
+        JSON.stringify({
+          id: await profile(),
+          name: "Denied Cleaner",
+          availability: hours,
+        }),
+      ]),
+    ).rejects.toThrow(/Admin access/);
+    expect(await readHours(id)).toEqual(hours);
+  });
+  it("rolls back profile registration when hours are missing or overlap", async () => {
+    for (const availability of [
+      [],
+      [...hours, { weekday: 1, start_time: "11:00", end_time: "14:00" }],
+    ]) {
+      const id = await profile();
+      await expect(
+        admin("select register_cleaner($1)", [
+          JSON.stringify({ id, name: "Invalid Cleaner", availability }),
+        ]),
+      ).rejects.toThrow(/working day|overlap/);
+      expect(await admin("select id from cleaners where id=$1", [id])).toEqual(
+        [],
+      );
+      expect(await readHours(id)).toEqual([]);
+    }
+  });
+  it("protects upcoming assignments, rolls back rejected hours, and refreshes/audits accepted changes", async () => {
+    const id = await registered();
+    const booking = {
+      customer_id: customer,
+      cleaner_id: id,
+      date: "2030-01-07",
+      time: "09:00",
+      duration_minutes: 120,
+      interval_weeks: 0,
+      occurrences: 1,
+    };
+    const [{ visitId }] = await admin<{ visitId: string }>(
+      'select create_booking($1) as "visitId"',
+      [JSON.stringify(booking)],
+    );
+    const before = await admin(
+      "select availability_updated_at from cleaners where id=$1",
+      [id],
+    );
+    await expect(
+      admin("select save_cleaner_availability($1)", [
+        JSON.stringify({
+          cleaner_id: id,
+          availability: [
+            { weekday: 1, start_time: "12:00", end_time: "17:00" },
+          ],
+        }),
+      ]),
+    ).rejects.toThrow(/Move conflicting upcoming visits/);
+    expect(await readHours(id)).toEqual(hours);
+    expect(
+      await admin("select availability_updated_at from cleaners where id=$1", [
+        id,
+      ]),
+    ).toEqual(before);
+    await admin("select change_visit($1)", [
+      JSON.stringify({ id: visitId, status: "cancelled" }),
+    ]);
+    await admin("select save_cleaner_availability($1)", [
+      JSON.stringify({ cleaner_id: id, availability: [] }),
+    ]);
+    expect(await readHours(id)).toEqual([]);
+    expect(
+      await admin("select availability_updated_at from cleaners where id=$1", [
+        id,
+      ]),
+    ).not.toEqual(before);
+    expect(
+      (
+        await admin(
+          "select id from audit_records where entity='availability' and actor_id=$1",
+          [DEMO_ADMIN],
+        )
+      ).length,
+    ).toBeGreaterThan(0);
+  });
+  it("merges adjacent hours so a booking can span their common boundary", async () => {
+    const id = await registered();
+    const availability = [
+      { weekday: 1, start_time: "08:00", end_time: "12:00" },
+      { weekday: 1, start_time: "12:00", end_time: "17:00" },
+    ];
+    await admin("select save_cleaner_availability($1)", [
+      JSON.stringify({ cleaner_id: id, availability }),
+    ]);
+    expect(await readHours(id)).toEqual([
+      { weekday: 1, start_time: "08:00", end_time: "17:00" },
+    ]);
+    await admin("select create_booking($1)", [
+      JSON.stringify({
+        customer_id: customer,
+        cleaner_id: id,
+        date: "2030-01-07",
+        time: "11:00",
+        duration_minutes: 120,
+        interval_weeks: 0,
+        occurrences: 1,
+      }),
+    ]);
+    await expect(
+      admin("select create_booking($1)", [
+        JSON.stringify({
+          customer_id: customer,
+          cleaner_id: id,
+          date: "2030-01-08",
+          time: "09:00",
+          duration_minutes: 120,
+          interval_weeks: 0,
+          occurrences: 1,
+        }),
+      ]),
+    ).rejects.toThrow(/availability/);
+  });
+});

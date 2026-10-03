@@ -40,6 +40,11 @@ export function useLiveWorkspace(
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "visits" },
           changed,
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "cleaners" },
+          changed,
         );
     } else
       channel.on("postgres_changes", { event: "*", schema: "public" }, changed);

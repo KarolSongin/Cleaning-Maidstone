@@ -1,4 +1,4 @@
-// Generated from 202610020001_foundation.sql by npm run db:types:demo. Do not edit.
+// Generated from applied migrations by npm run db:types:demo. Do not edit.
 export type Json =
   | string
   | number
@@ -158,16 +158,19 @@ export type Database = {
           id: string;
           name: string;
           active: boolean;
+          availability_updated_at: string;
         };
         Insert: {
           id?: string;
           name: string;
           active?: boolean;
+          availability_updated_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
           active?: boolean;
+          availability_updated_at?: string;
         };
         Relationships: [];
       };
@@ -642,6 +645,7 @@ export type Database = {
       request_leave: { Args: { p: Json }; Returns: string };
       require_admin: { Args: Record<string, never>; Returns: undefined };
       review_request: { Args: { p: Json }; Returns: undefined };
+      save_cleaner_availability: { Args: { p: Json }; Returns: undefined };
       save_content: { Args: { p: Json }; Returns: string };
       save_customer: { Args: { p: Json }; Returns: string };
       save_task: { Args: { p: Json }; Returns: string };

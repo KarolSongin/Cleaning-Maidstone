@@ -6,9 +6,11 @@ await db.exec(
   `create schema auth; create role anon; create role authenticated; create role service_role bypassrls; grant usage on schema public,auth to anon,authenticated,service_role; create table auth.users(id uuid primary key,raw_user_meta_data jsonb default '{}'); create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;`,
 );
 const migrations = await Promise.all(
-  ["202610020001_foundation.sql", "202610020004_transcription_jobs.sql"].map(
-    (n) => fs.readFile("supabase/migrations/" + n, "utf8"),
-  ),
+  [
+    "202610020001_foundation.sql",
+    "202610020004_transcription_jobs.sql",
+    "202610030001_cleaner_availability.sql",
+  ].map((n) => fs.readFile("supabase/migrations/" + n, "utf8")),
 );
 for (const sql of migrations) await db.exec(sql);
 const types = (t) =>
@@ -34,7 +36,7 @@ const tables = {};
 for (const c of columns) {
   (tables[c.table_name] ??= []).push(c);
 }
-let out = `// Generated from 202610020001_foundation.sql by npm run db:types:demo. Do not edit.\nexport type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];\nexport type Database = { public: { Tables: {\n`;
+let out = `// Generated from applied migrations by npm run db:types:demo. Do not edit.\nexport type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];\nexport type Database = { public: { Tables: {\n`;
 for (const [name, cols] of Object.entries(tables)) {
   out += `${name}: { Row: {\n`;
   for (const c of cols)
@@ -54,9 +56,11 @@ const funcs = (
   )
 ).rows;
 const applicationFunctions = new Set(
-  [...migrations.join("\n").matchAll(/create function public\.([a-z_]+)/g)].map(
-    (m) => m[1],
-  ),
+  [
+    ...migrations
+      .join("\n")
+      .matchAll(/create(?: or replace)? function public\.([a-z_]+)/g),
+  ].map((m) => m[1]),
 );
 for (const f of funcs) {
   if (!applicationFunctions.has(f.proname)) continue;

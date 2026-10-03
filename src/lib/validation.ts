@@ -2,6 +2,39 @@ import { z } from "zod";
 const text = (max = 500) => z.string().trim().max(max);
 const date = z.iso.date();
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+export const weeklyAvailabilitySchema = z
+  .array(
+    z
+      .object({
+        weekday: z.number().int().min(0).max(6),
+        start_time: time,
+        end_time: time,
+      })
+      .refine((slot) => slot.start_time < slot.end_time, {
+        message: "Each end time must follow its start time on the same day",
+      }),
+  )
+  .max(28)
+  .refine(
+    (slots) =>
+      !slots.some((a, i) =>
+        slots.some(
+          (b, j) =>
+            i < j &&
+            a.weekday === b.weekday &&
+            a.start_time < b.end_time &&
+            b.start_time < a.end_time,
+        ),
+      ),
+    { message: "Availability periods on the same day must not overlap" },
+  );
+export const cleanerInviteSchema = z.object({
+  name: text(100).min(2),
+  email: z.email().max(254),
+  availability: weeklyAvailabilitySchema.refine((slots) => slots.length > 0, {
+    message: "Choose at least one working day and its hours",
+  }),
+});
 export const enquirySchema = z.object({
   name: text(100).min(2),
   email: z.email().max(254),
@@ -75,6 +108,13 @@ export const contentSchema = z.object({
   published_at: z.iso.datetime().or(z.literal("")).optional(),
 });
 export const operationSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("cleaner_availability"),
+    data: z.object({
+      cleaner_id: z.uuid(),
+      availability: weeklyAvailabilitySchema,
+    }),
+  }),
   z.object({ action: z.literal("customer"), data: customerSchema }),
   z.object({ action: z.literal("booking"), data: bookingSchema }),
   z.object({
