@@ -1166,3 +1166,116 @@ legend {
     transform: none;
   }
 }
+
+/* Booking rates and the cleaner's own cash payment. */
+.booking-rates {
+  border: 0;
+  padding: 0;
+  margin: 8px 0;
+  min-width: 0;
+}
+.booking-rates legend {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.booking-rates legend .badge {
+  margin-left: 8px;
+  font-size: 10px;
+}
+.finance-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 15px;
+}
+.finance-inputs label {
+  min-width: 0;
+  font-size: 12px;
+}
+.finance-inputs input {
+  width: 100%;
+  min-width: 0;
+}
+.finance-preview {
+  margin-top: 14px;
+}
+.finance-summary {
+  border: 1px solid #d5e3de;
+  background: #f3f8f5;
+  border-radius: 12px;
+  padding: 16px;
+}
+.finance-caption {
+  font-size: 12px;
+  color: #385e52;
+  margin-bottom: 12px;
+}
+.finance-amounts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.finance-amounts dt {
+  font-size: 11px;
+  color: #466357;
+}
+.finance-amounts dd {
+  font-size: 23px;
+  font-weight: 600;
+  margin: 5px 0 0;
+}
+.finance-amounts small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #466357;
+}
+.finance-unpriced {
+  color: #716a5a;
+  background: #faf6eb;
+  padding: 12px 15px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.visit-finances {
+  margin: 24px 0;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e3e7e5;
+}
+.visit-finances h3 {
+  margin-bottom: 16px;
+}
+.recurring-booking > .finance-summary,
+.recurring-booking > .finance-unpriced {
+  margin-bottom: 18px;
+}
+.cleaner-pay {
+  display: grid;
+  gap: 5px;
+  margin: 20px 0;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f1f7f3;
+  color: #365d4e;
+}
+.cleaner-pay span,
+.cleaner-pay small,
+.cleaner-pay p {
+  font-size: 12px;
+}
+.cleaner-pay strong {
+  font-size: 27px;
+}
+@media (max-width: 700px) {
+  .finance-inputs {
+    grid-template-columns: 1fr;
+  }
+  .finance-amounts {
+    gap: 8px;
+  }
+  .finance-amounts dd {
+    font-size: 19px;
+  }
+}

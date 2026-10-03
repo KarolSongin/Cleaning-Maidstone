@@ -2,6 +2,8 @@
 import { useState } from "react";
 import type { DashboardData } from "@/lib/models";
 import { bookingPeriod, calendarDate } from "@/lib/recurring-bookings";
+import { BookingRatesEditor } from "./booking-rates";
+import { ratesFromForm } from "@/lib/finances";
 import { OperationForm, Field } from "./operation-form";
 
 export function BookingForm({
@@ -14,6 +16,7 @@ export function BookingForm({
   const [interval, setInterval] = useState<0 | 1 | 2>(0);
   const [weeks, setWeeks] = useState("8");
   const [date, setDate] = useState("");
+  const [minutes, setMinutes] = useState(180);
   let period: ReturnType<typeof bookingPeriod> | null = null;
   if (
     interval &&
@@ -34,6 +37,7 @@ export function BookingForm({
       label="Create booking"
       onSaved={onSaved}
       map={(form) => ({
+        ...ratesFromForm(form),
         customer_id: form.get("customer_id"),
         cleaner_id: form.get("cleaner_id"),
         date: form.get("date"),
@@ -89,7 +93,11 @@ export function BookingForm({
         />
         <label>
           Duration
-          <select name="duration_minutes" defaultValue="180">
+          <select
+            name="duration_minutes"
+            value={minutes}
+            onChange={(e) => setMinutes(Number(e.target.value))}
+          >
             {[60, 90, 120, 180, 240, 300, 360, 480].map((n) => (
               <option key={n} value={n}>
                 {n / 60} {n === 60 ? "hour" : "hours"}
@@ -141,6 +149,7 @@ export function BookingForm({
           </small>
         </div>
       )}
+      <BookingRatesEditor minutes={minutes} recurring={!!interval} />
       <label>
         Instructions for the cleaner
         <textarea name="instructions" />

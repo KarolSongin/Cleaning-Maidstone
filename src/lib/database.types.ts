@@ -165,18 +165,21 @@ export type Database = {
           name: string;
           active: boolean;
           availability_updated_at: string;
+          pay_updated_at: string;
         };
         Insert: {
           id?: string;
           name: string;
           active?: boolean;
           availability_updated_at?: string;
+          pay_updated_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
           active?: boolean;
           availability_updated_at?: string;
+          pay_updated_at?: string;
         };
         Relationships: [];
       };
@@ -510,6 +513,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      series_finances: {
+        Row: {
+          id: string;
+          customer_rate_pence: number;
+          admin_rate_pence: number;
+          cleaner_rate_pence: number;
+        };
+        Insert: {
+          id?: string;
+          customer_rate_pence: number;
+          admin_rate_pence: number;
+          cleaner_rate_pence: number;
+        };
+        Update: {
+          id?: string;
+          customer_rate_pence?: number;
+          admin_rate_pence?: number;
+          cleaner_rate_pence?: number;
+        };
+        Relationships: [];
+      };
       transcription_jobs: {
         Row: {
           id: string;
@@ -576,6 +600,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      visit_finances: {
+        Row: {
+          id: string;
+          customer_rate_pence: number;
+          admin_rate_pence: number;
+          cleaner_rate_pence: number;
+        };
+        Insert: {
+          id?: string;
+          customer_rate_pence: number;
+          admin_rate_pence: number;
+          cleaner_rate_pence: number;
+        };
+        Update: {
+          id?: string;
+          customer_rate_pence?: number;
+          admin_rate_pence?: number;
+          cleaner_rate_pence?: number;
+        };
+        Relationships: [];
+      };
       visits: {
         Row: {
           id: string;
@@ -638,6 +683,8 @@ export type Database = {
           customer_name: string;
           address: string;
           postcode: string;
+          cleaner_rate_pence: number;
+          cleaner_total_pence: number;
         }[];
       };
       create_booking: { Args: { p: Json }; Returns: string };
@@ -655,6 +702,7 @@ export type Database = {
       save_content: { Args: { p: Json }; Returns: string };
       save_customer: { Args: { p: Json }; Returns: string };
       save_task: { Args: { p: Json }; Returns: string };
+      save_visit_finances: { Args: { p: Json }; Returns: undefined };
       set_transcript: { Args: { p: Json }; Returns: undefined };
       submit_enquiry: {
         Args: { p: Json; throttle_key: string };
@@ -669,6 +717,7 @@ export type Database = {
         Returns: undefined;
       };
       update_transcription_job: { Args: { p: Json }; Returns: undefined };
+      validate_booking_rates: { Args: { p: Json }; Returns: undefined };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

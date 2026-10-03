@@ -72,8 +72,25 @@ export const customerSchema = z.object({
   preferences: text(2000).default(""),
   internal_notes: text(4000).default(""),
 });
+const rate = z.number().int().min(0).max(100000);
+const rateFields = {
+  customer_rate_pence: rate.min(1),
+  admin_rate_pence: rate,
+  cleaner_rate_pence: rate,
+};
+const balancedRates = (p: {
+  customer_rate_pence: number;
+  admin_rate_pence: number;
+  cleaner_rate_pence: number;
+}) => p.customer_rate_pence === p.admin_rate_pence + p.cleaner_rate_pence;
+const balanceMessage =
+  "Customer hourly rate must equal the admin share plus cleaner cash pay";
+export const bookingRatesSchema = z
+  .object(rateFields)
+  .refine(balancedRates, { message: balanceMessage });
 export const bookingSchema = z
   .object({
+    ...rateFields,
     customer_id: z.uuid(),
     cleaner_id: z.uuid(),
     date,
@@ -84,6 +101,7 @@ export const bookingSchema = z
     duration_weeks: z.number().int().min(1).max(52).optional(),
     instructions: text(2000).default(""),
   })
+  .refine(balancedRates, { message: balanceMessage })
   .refine((p) => p.interval_weeks !== 0 || p.occurrences === 1, {
     message: "One-off visits have one occurrence",
   })
@@ -136,6 +154,12 @@ export const operationSchema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("customer"), data: customerSchema }),
   z.object({ action: z.literal("booking"), data: bookingSchema }),
+  z.object({
+    action: z.literal("visit_finances"),
+    data: z
+      .object({ id: z.uuid(), ...rateFields })
+      .refine(balancedRates, { message: balanceMessage }),
+  }),
   z.object({
     action: z.literal("visit"),
     data: z.object({

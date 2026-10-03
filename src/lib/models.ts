@@ -57,6 +57,12 @@ export type BookingSeries = {
   interval_weeks: 1 | 2;
   active: boolean;
 };
+export type BookingRates = {
+  customer_rate_pence: number;
+  admin_rate_pence: number;
+  cleaner_rate_pence: number;
+};
+export type BookingFinance = BookingRates & { id: string };
 export type CleanerJob = {
   id: string;
   starts_at: string;
@@ -64,6 +70,8 @@ export type CleanerJob = {
   status: string;
   instructions: string;
   customer_name: string;
+  cleaner_rate_pence: number | null;
+  cleaner_total_pence: number | null;
   address: string;
   postcode: string;
 };
@@ -117,6 +125,8 @@ export type DashboardData = {
   cleaners: Cleaner[];
   visits: Visit[];
   booking_series: BookingSeries[];
+  visit_finances: BookingFinance[];
+  series_finances: BookingFinance[];
   enquiries: Enquiry[];
   tasks: Task[];
   conversations: Conversation[];

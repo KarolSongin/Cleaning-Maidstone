@@ -1,4 +1,5 @@
 "use client";
+import { money } from "@/lib/finances";
 import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { CalendarDays, List, LockKeyhole } from "lucide-react";
@@ -182,6 +183,19 @@ function JobCard({
       <p style={{ marginTop: 18 }}>
         {job.instructions || "No additional instructions for this visit."}
       </p>
+      <div className="cleaner-pay" aria-label="Your cash pay">
+        {job.cleaner_rate_pence !== null && job.cleaner_total_pence !== null ? (
+          <>
+            <span>Cash payment for this visit</span>
+            <strong>{money(job.cleaner_total_pence)}</strong>
+            <small>
+              {money(job.cleaner_rate_pence)} / hour · cash paid by the customer
+            </small>
+          </>
+        ) : (
+          <p>Pay not set yet. Please check with your admin.</p>
+        )}
+      </div>
       {job.status !== "completed" && (
         <Button
           size="sm"

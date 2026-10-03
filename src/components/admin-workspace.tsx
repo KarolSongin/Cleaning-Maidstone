@@ -20,6 +20,7 @@ import {
   WeeklyAvailabilitySummary,
 } from "./weekly-availability";
 import { cleanerInviteSchema } from "@/lib/validation";
+import { VisitFinances } from "./booking-rates";
 import { BookingForm } from "./booking-form";
 import { RecurringBookings } from "./recurring-bookings";
 import { recurringSummaries, londonToday } from "@/lib/recurring-bookings";
@@ -74,7 +75,9 @@ export function AdminWorkspace({
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [selectedCustomer, setCustomer] = useState<Customer | undefined>();
-  const [selectedVisit, setVisit] = useState<Visit | undefined>();
+  const [selectedVisitId, setVisitId] = useState<string | undefined>();
+  const selectedVisit = data.visits.find((v) => v.id === selectedVisitId);
+  const setVisit = (visit: Visit) => setVisitId(visit.id);
   const [selectedCleanerIds, setSelectedCleanerIds] = useState<string[] | null>(
     null,
   );
@@ -484,6 +487,13 @@ export function AdminWorkspace({
                     <br />
                     {dateTime(selectedVisit.starts_at)}
                   </p>
+                  <VisitFinances
+                    visit={selectedVisit}
+                    rates={data.visit_finances.find(
+                      (f) => f.id === selectedVisit.id,
+                    )}
+                    onSaved={refresh}
+                  />
                   <OperationForm
                     key={selectedVisit.id}
                     action="visit"

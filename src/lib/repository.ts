@@ -49,7 +49,11 @@ export async function rows<T>(
       : actor === "service_role"
         ? serviceClient()
         : await sessionClient();
-  if (table === "visits" || table === "booking_series") {
+  if (
+    ["visits", "booking_series", "visit_finances", "series_finances"].includes(
+      table,
+    )
+  ) {
     // A year's visits can exceed PostgREST's per-request row limit. Fetch the
     // complete RLS-visible set so counts and free calendar hours stay accurate.
     const records: unknown[] = [];
@@ -115,6 +119,8 @@ export async function dashboard(actor: Actor): Promise<DashboardData> {
     "cleaners",
     "visits",
     "booking_series",
+    "visit_finances",
+    "series_finances",
     "enquiries",
     "follow_up_tasks",
     "conversations",
@@ -154,6 +160,8 @@ export async function mutate(operation: Operation, actor: Actor) {
       return rpc("save_customer", { p: data }, actor);
     case "booking":
       return rpc("create_booking", { p: data }, actor);
+    case "visit_finances":
+      return rpc("save_visit_finances", { p: data }, actor);
     case "visit":
       return rpc("change_visit", { p: data }, actor);
     case "transition":

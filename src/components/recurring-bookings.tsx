@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { DashboardData } from "@/lib/models";
 import { recurringSummaries, calendarDate } from "@/lib/recurring-bookings";
+import { FinanceSummary } from "./booking-rates";
 import { Button } from "./ui/button";
 import { OperationForm, Field } from "./operation-form";
 
@@ -171,6 +172,11 @@ export function RecurringBookings({
                     </dd>
                   </div>
                 </dl>
+                <FinanceSummary
+                  rates={data.series_finances.find((f) => f.id === series.id)}
+                  minutes={series.duration_minutes}
+                  label="Agreed rates per regular visit"
+                />
                 <div className="recurring-followup-row">
                   <p>
                     {status === "ended"

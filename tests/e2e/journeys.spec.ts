@@ -235,6 +235,9 @@ test("customer changes and overlapping scheduling requests persist", async ({
       cleaner_id: data.cleaners[0].id,
       date,
       time: "09:00",
+      customer_rate_pence: 1800,
+      admin_rate_pence: 300,
+      cleaner_rate_pence: 1500,
       duration_minutes: 180,
       interval_weeks: 0,
       occurrences: 1,
@@ -575,6 +578,9 @@ test("admin sets recurring hours and sees free capacity for selected cleaners", 
         cleaner_id: cleaner.id,
         date: day.toISOString().slice(0, 10),
         time: "09:00",
+        customer_rate_pence: 1800,
+        admin_rate_pence: 300,
+        cleaner_rate_pence: 1500,
         duration_minutes: 120,
         interval_weeks: 0,
         occurrences: 1,
@@ -759,14 +765,12 @@ test("admin creates 52-week weekly and fortnightly bookings and reviews their da
     (c: { name: string }) => c.name === "Taylor Reed",
   );
   await page.goto("/admin/calendar/");
-  const form = page
-    .locator("section.panel")
-    .filter({
-      has: page.getByRole("heading", {
-        name: "Create a visit or recurring booking",
-        exact: true,
-      }),
-    });
+  const form = page.locator("section.panel").filter({
+    has: page.getByRole("heading", {
+      name: "Create a visit or recurring booking",
+      exact: true,
+    }),
+  });
   await form
     .getByRole("combobox", { name: "Customer", exact: true })
     .selectOption(customerId);
@@ -774,6 +778,11 @@ test("admin creates 52-week weekly and fortnightly bookings and reviews their da
     .getByRole("combobox", { name: "Cleaner", exact: true })
     .selectOption(cleaner.id);
   await form.getByLabel("First date", { exact: true }).fill("2034-01-02");
+  await form.getByLabel("Customer hourly rate (£)", { exact: true }).fill("18");
+  await form.getByLabel("Admin hourly share (£)", { exact: true }).fill("3");
+  await form
+    .getByLabel("Cleaner hourly cash pay (£)", { exact: true })
+    .fill("15");
   await form
     .getByLabel("Local start time", { exact: true })
     .fill(project === "desktop" ? "09:00" : "10:00");
@@ -914,6 +923,9 @@ test("admin sees renewal reminders and saves a customer follow-up", async ({
           cleaner_id: cleanerId,
           date: date.toString(),
           time: "09:00",
+          customer_rate_pence: 1800,
+          admin_rate_pence: 300,
+          cleaner_rate_pence: 1500,
           duration_minutes: 60,
           interval_weeks: 1,
           occurrences: 2,
@@ -999,5 +1011,245 @@ test("admin sees renewal reminders and saves a customer follow-up", async ({
   expect(
     await (await page.request.get("/api/operations/")).json(),
   ).not.toHaveProperty("booking_series");
+  expect(errors).toEqual([]);
+});
+
+test("booking rates balance, recur independently and expose only cleaner cash pay", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  const project = test.info().project.name;
+  const { Temporal } = await import("@js-temporal/polyfill");
+  const date = Temporal.Now.plainDateISO("Europe/London")
+    .add({ days: project === "desktop" ? 1 : 2 })
+    .toString();
+  const customerName = `Cash ${project} Customer`;
+  await login(page, "admin");
+  const customerResponse = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "customer",
+      data: {
+        name: customerName,
+        email: "cash@example.test",
+        phone: "+447700900456",
+        address: "9 Synthetic Cash Test Lane",
+        postcode: "ME14 1AA",
+        internal_notes: "Private financial customer note",
+      },
+    },
+  });
+  expect(customerResponse.status()).toBe(200);
+  const customerId = (await customerResponse.json()).id;
+  await page.goto("/admin/calendar/");
+  const form = page
+    .locator("form")
+    .filter({
+      has: page.getByRole("button", { name: "Create booking", exact: true }),
+    });
+  await form
+    .getByRole("combobox", { name: "Customer", exact: true })
+    .selectOption(customerId);
+  await form
+    .getByRole("combobox", { name: "Cleaner", exact: true })
+    .selectOption("22222222-2222-4222-8222-222222222222");
+  await form.getByLabel("First date", { exact: true }).fill(date);
+  await form.getByLabel("Local start time", { exact: true }).fill("16:00");
+  await form
+    .getByRole("combobox", { name: "Duration", exact: true })
+    .selectOption("90");
+  await form.getByLabel("Customer hourly rate (£)", { exact: true }).fill("18");
+  await form.getByLabel("Admin hourly share (£)", { exact: true }).fill("3");
+  const cleanerRate = form.getByLabel("Cleaner hourly cash pay (£)", {
+    exact: true,
+  });
+  await cleanerRate.fill("14");
+  await expect(form.locator(".finance-preview")).toContainText(
+    "These amounts must add up",
+  );
+  expect(
+    await cleanerRate.evaluate(
+      (el: HTMLInputElement) => el.validity.customError,
+    ),
+  ).toBe(true);
+  await form
+    .getByRole("button", {
+      name: "Set cleaner pay to £15.00 / hour",
+      exact: true,
+    })
+    .click();
+  await expect(
+    form.getByLabel("For this visit", { exact: true }),
+  ).toContainText("£27.00");
+  await expect(
+    form.getByLabel("For this visit", { exact: true }),
+  ).toContainText("£4.50");
+  await expect(
+    form.getByLabel("For this visit", { exact: true }),
+  ).toContainText("£22.50");
+  let responsePromise = page.waitForResponse(
+    (r) =>
+      r.url().endsWith("/api/operations/") && r.request().method() === "POST",
+  );
+  await form
+    .getByRole("button", { name: "Create booking", exact: true })
+    .click();
+  const response = await responsePromise;
+  expect(response.status()).toBe(200);
+  const visitId = (await response.json()).id;
+  await expect(form.getByRole("status")).toContainText("Saved successfully");
+  // Open this day's actual calendar event to edit only the one-off visit.
+  await page.locator(".fc-timeGridDay-button").click();
+  for (let n = 0; n < (project === "desktop" ? 1 : 2); n++)
+    await page.locator(".fc-next-button").click();
+  await page
+    .locator(".fc-timegrid-event")
+    .filter({ hasText: customerName })
+    .click();
+  const finances = page.getByLabel("Visit finances", { exact: true });
+  await finances
+    .getByLabel("Customer hourly rate (£)", { exact: true })
+    .fill("22");
+  await finances
+    .getByLabel("Admin hourly share (£)", { exact: true })
+    .fill("5.50");
+  await finances
+    .getByLabel("Cleaner hourly cash pay (£)", { exact: true })
+    .fill("16.50");
+  await finances
+    .getByRole("button", { name: "Save visit rates", exact: true })
+    .click();
+  await expect(
+    finances.getByLabel("For this visit", { exact: true }),
+  ).toContainText("£24.75");
+  await expect(
+    finances.getByLabel("Customer hourly rate (£)", { exact: true }),
+  ).toHaveValue("22.00");
+  await expect(
+    finances.getByLabel("For this visit", { exact: true }),
+  ).toContainText("£8.25");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `test-results/finances-admin-${project}.png`,
+    fullPage: true,
+  });
+  await form.getByLabel("Local start time", { exact: true }).fill("14:00");
+  await form
+    .getByRole("combobox", { name: "Repeat", exact: true })
+    .selectOption("1");
+  await form
+    .getByLabel("Booking period (1–52 weeks)", { exact: true })
+    .fill("2");
+  await expect(
+    form.getByLabel("For each regular visit", { exact: true }),
+  ).toContainText("£22.50");
+  responsePromise = page.waitForResponse(
+    (r) =>
+      r.url().endsWith("/api/operations/") && r.request().method() === "POST",
+  );
+  await form
+    .getByRole("button", { name: "Create booking", exact: true })
+    .click();
+  const recurringResponse = await responsePromise;
+  expect(recurringResponse.status()).toBe(200);
+  const seriesId = (await recurringResponse.json()).id;
+  await page.goto("/admin/recurring/");
+  const record = page.locator(
+    `.recurring-booking[data-series-id="${seriesId}"]`,
+  );
+  await expect(
+    record.getByLabel("Agreed rates per regular visit", { exact: true }),
+  ).toContainText("£27.00");
+  const adminData = await (await page.request.get("/api/operations/")).json();
+  expect(
+    adminData.visit_finances.find((f: { id: string }) => f.id === visitId),
+  ).toMatchObject({
+    customer_rate_pence: 2200,
+    admin_rate_pence: 550,
+    cleaner_rate_pence: 1650,
+  });
+  const recurringVisits = adminData.visits.filter(
+    (v: { series_id: string }) => v.series_id === seriesId,
+  );
+  expect(recurringVisits).toHaveLength(2);
+  for (const visit of recurringVisits)
+    expect(
+      adminData.visit_finances.find((f: { id: string }) => f.id === visit.id),
+    ).toMatchObject({
+      customer_rate_pence: 1800,
+      admin_rate_pence: 300,
+      cleaner_rate_pence: 1500,
+    });
+  // A direct malformed request cannot bypass the balanced split.
+  const invalid = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "visit_finances",
+      data: {
+        id: visitId,
+        customer_rate_pence: 2200,
+        admin_rate_pence: 550,
+        cleaner_rate_pence: 1600,
+      },
+    },
+  });
+  expect(invalid.status()).toBe(400);
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await login(page, "cleaner");
+  const ownDataResponse = await page.request.get("/api/operations/");
+  expect(ownDataResponse.headers()["cache-control"]).toContain("no-store");
+  const ownData = await ownDataResponse.json();
+  expect(
+    ownData.jobs.find((j: { id: string }) => j.id === visitId),
+  ).toMatchObject({ cleaner_rate_pence: 1650, cleaner_total_pence: 2475 });
+  const serialized = JSON.stringify(ownData);
+  for (const privateField of [
+    "customer_rate_pence",
+    "admin_rate_pence",
+    "visit_finances",
+    "series_finances",
+    "internal_notes",
+  ])
+    expect(serialized).not.toContain(privateField);
+  const cleanerHTML = await (await page.request.get("/cleaner/")).text();
+  expect(cleanerHTML).not.toContain("customer_rate_pence");
+  expect(cleanerHTML).not.toContain("admin_rate_pence");
+  const ownCard = page
+    .locator(".job-card")
+    .filter({ hasText: customerName })
+    .filter({ hasText: "£24.75" });
+  await expect(ownCard).toHaveCount(1);
+  await expect(
+    ownCard.getByLabel("Your cash pay", { exact: true }),
+  ).toContainText("£16.50 / hour");
+  await expect(ownCard).not.toContainText("£22.00");
+  await expect(ownCard).not.toContainText("£5.50");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: `test-results/finances-cleaner-${project}.png`,
+    fullPage: true,
+  });
+  const denied = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "visit_finances",
+      data: {
+        id: visitId,
+        customer_rate_pence: 1800,
+        admin_rate_pence: 300,
+        cleaner_rate_pence: 1500,
+      },
+    },
+  });
+  expect(denied.status()).toBe(403);
   expect(errors).toEqual([]);
 });
