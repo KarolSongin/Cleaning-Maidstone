@@ -7,12 +7,14 @@ import {
   FileText,
   UserRound,
   ArrowUpRight,
+  Repeat2,
 } from "lucide-react";
 import type { Actor } from "@/lib/models";
 const links = [
   ["", "Overview", LayoutDashboard],
   ["customers", "Customers", Users],
   ["calendar", "Calendar", CalendarDays],
+  ["recurring", "Recurring bookings", Repeat2],
   ["cleaners", "Cleaners", UserRound],
   ["conversations", "Conversations", Phone],
   ["content", "Content", FileText],

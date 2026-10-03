@@ -80,12 +80,31 @@ export const bookingSchema = z
     time,
     duration_minutes: z.number().int().min(30).max(480),
     interval_weeks: z.union([z.literal(0), z.literal(1), z.literal(2)]),
-    occurrences: z.number().int().min(1).max(26),
+    occurrences: z.number().int().min(1).max(52),
+    duration_weeks: z.number().int().min(1).max(52).optional(),
     instructions: text(2000).default(""),
   })
   .refine((p) => p.interval_weeks !== 0 || p.occurrences === 1, {
     message: "One-off visits have one occurrence",
-  });
+  })
+  .refine(
+    (p) =>
+      p.interval_weeks === 0 ||
+      (p.duration_weeks ?? p.occurrences * p.interval_weeks) <= 52,
+    {
+      message: "Recurring bookings can cover at most 52 weeks",
+    },
+  )
+  .refine(
+    (p) =>
+      p.interval_weeks === 0 ||
+      p.duration_weeks === undefined ||
+      p.occurrences === Math.ceil(p.duration_weeks / p.interval_weeks),
+    {
+      message:
+        "The number of visits must match the booking period and frequency",
+    },
+  );
 const section = z.object({
   heading: text(150).min(1),
   text: text(3000).min(1),

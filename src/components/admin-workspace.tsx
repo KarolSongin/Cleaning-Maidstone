@@ -20,6 +20,9 @@ import {
   WeeklyAvailabilitySummary,
 } from "./weekly-availability";
 import { cleanerInviteSchema } from "@/lib/validation";
+import { BookingForm } from "./booking-form";
+import { RecurringBookings } from "./recurring-bookings";
+import { recurringSummaries, londonToday } from "@/lib/recurring-bookings";
 const CalendarBoard = dynamic(() => import("./calendar-board"), {
   ssr: false,
   loading: () => <p className="empty-state">Loading calendar…</p>,
@@ -32,6 +35,7 @@ const names: Record<string, string> = {
   overview: "Your business, at a glance.",
   customers: "People & their homes.",
   calendar: "A well-organised week.",
+  recurring: "Recurring bookings.",
   cleaners: "The people behind the care.",
   conversations: "Every conversation, together.",
   content: "Words that feel like you.",
@@ -58,12 +62,15 @@ export function AdminWorkspace({
   initialData,
   section,
   demo,
+  initialToday,
 }: {
   initialData: DashboardData;
   section: string;
   demo: boolean;
+  initialToday: string;
 }) {
   const [data, setData] = useState(initialData);
+  const [today, setToday] = useState(initialToday);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [selectedCustomer, setCustomer] = useState<Customer | undefined>();
@@ -83,6 +90,7 @@ export function AdminWorkspace({
     const r = await fetch("/api/operations/");
     if (!r.ok) throw new Error("Could not refresh the workspace");
     setData(await r.json());
+    setToday(londonToday());
   }, []);
   useLiveWorkspace(!demo, refresh);
   const run = async (action: string, value: unknown) => {
@@ -98,6 +106,9 @@ export function AdminWorkspace({
     data.customers.find((c) => c.id === id)?.name || "Unmatched";
   const cleanerName = (id: string) =>
     data.cleaners.find((c) => c.id === id)?.name || "Cleaner";
+  const endingSoon = recurringSummaries(data, today).filter(
+    (s) => s.status === "ending-soon",
+  );
   const upcoming = data.visits
     .filter((v) => v.status === "scheduled" || v.status === "started")
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
@@ -117,7 +128,9 @@ export function AdminWorkspace({
           <p>
             {section === "calendar"
               ? "Day, week and month views. All times are Europe/London."
-              : "A clear place to look after the details."}
+              : section === "recurring"
+                ? "Start dates, end dates and follow-ups for your regular customers."
+                : "A clear place to look after the details."}
           </p>
         </div>
         <Button
@@ -151,6 +164,16 @@ export function AdminWorkspace({
               <strong>{data.tasks.filter((t) => !t.done).length}</strong>
             </div>
           </div>
+          {endingSoon.length > 0 && (
+            <Link className="recurring-reminder" href="/admin/recurring/">
+              <strong>
+                {endingSoon.length} recurring{" "}
+                {endingSoon.length === 1 ? "booking ends" : "bookings end"}{" "}
+                within a month
+              </strong>
+              <span>Review end dates and arrange a follow-up ↗</span>
+            </Link>
+          )}
           <div className="ops-columns">
             <section className="panel">
               <h2>Coming up</h2>
@@ -217,6 +240,9 @@ export function AdminWorkspace({
             </section>
           </div>
         </>
+      )}
+      {section === "recurring" && (
+        <RecurringBookings data={data} today={today} onSaved={refresh} />
       )}
       {section === "customers" && (
         <>
@@ -442,92 +468,7 @@ export function AdminWorkspace({
           <div className="ops-columns">
             <section className="panel">
               <h2>Create a visit or recurring booking</h2>
-              <OperationForm
-                action="booking"
-                label="Create booking"
-                onSaved={refresh}
-                map={(f) => ({
-                  customer_id: f.get("customer_id"),
-                  cleaner_id: f.get("cleaner_id"),
-                  date: f.get("date"),
-                  time: f.get("time"),
-                  duration_minutes: Number(f.get("duration_minutes")),
-                  interval_weeks: Number(f.get("interval_weeks")),
-                  occurrences:
-                    Number(f.get("interval_weeks")) === 0
-                      ? 1
-                      : Number(f.get("occurrences")),
-                  instructions: f.get("instructions"),
-                })}
-              >
-                <div className="form-grid">
-                  <label>
-                    Customer
-                    <select name="customer_id" required>
-                      <option value="">Select customer</option>
-                      {data.customers.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Cleaner
-                    <select name="cleaner_id" required>
-                      <option value="">Select cleaner</option>
-                      {data.cleaners
-                        .filter((c) => c.active)
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <Field name="date" label="First date" type="date" required />
-                  <Field
-                    name="time"
-                    label="Local start time"
-                    type="time"
-                    value="09:00"
-                    required
-                  />
-                  <label>
-                    Duration
-                    <select name="duration_minutes" defaultValue="180">
-                      {[60, 90, 120, 180, 240, 300, 360, 480].map((n) => (
-                        <option key={n} value={n}>
-                          {n / 60} hours
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Repeat
-                    <select name="interval_weeks">
-                      <option value="0">One-off</option>
-                      <option value="1">Weekly</option>
-                      <option value="2">Fortnightly</option>
-                    </select>
-                  </label>
-                  <Field
-                    name="occurrences"
-                    label="Number of recurring visits (1–26)"
-                    type="number"
-                    value={8}
-                  />
-                </div>
-                <label>
-                  Instructions for the cleaner
-                  <textarea name="instructions" />
-                </label>
-                <p className="form-small">
-                  Visits are materialised for this horizon. Recurring
-                  appointments preserve the local start time through clock
-                  changes. This version does not automatically extend a series.
-                </p>
-              </OperationForm>
+              <BookingForm data={data} onSaved={refresh} />
             </section>
             <section className="panel">
               <h2>

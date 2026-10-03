@@ -65,6 +65,21 @@ export async function initialiseDatabase(db: PGlite, seed = false) {
         ),
       );
     });
+  const periods = await db.query<{ exists: boolean }>(
+    "select exists(select 1 from information_schema.columns where table_schema='public' and table_name='booking_series' and column_name='ends_on')",
+  );
+  if (!periods.rows[0].exists)
+    await db.transaction(async (tx) => {
+      await tx.exec(
+        await fs.readFile(
+          path.join(
+            process.cwd(),
+            "supabase/migrations/202610030002_recurring_bookings.sql",
+          ),
+          "utf8",
+        ),
+      );
+    });
   if (!exists.rows[0].exists && seed) await seedDatabase(db);
 }
 async function seedDatabase(db: PGlite) {

@@ -730,3 +730,274 @@ test("cleaner sees approved weekly hours and can only request a change", async (
     fullPage: true,
   });
 });
+
+test("admin creates 52-week weekly and fortnightly bookings and reviews their dates", async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await login(page, "admin");
+  const project = test.info().project.name;
+  const customerResponse = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "customer",
+      data: {
+        name: `Yearly ${project} Customer`,
+        email: `yearly-${project}@example.test`,
+        phone: "+447700900501",
+        address: "1 Synthetic Yearly Lane",
+        postcode: "ME14 1AA",
+      },
+    },
+  });
+  expect(customerResponse.status()).toBe(200);
+  const customerId = (await customerResponse.json()).id;
+  const data = await (await page.request.get("/api/operations/")).json();
+  const cleaner = data.cleaners.find(
+    (c: { name: string }) => c.name === "Taylor Reed",
+  );
+  await page.goto("/admin/calendar/");
+  const form = page
+    .locator("section.panel")
+    .filter({
+      has: page.getByRole("heading", {
+        name: "Create a visit or recurring booking",
+        exact: true,
+      }),
+    });
+  await form
+    .getByRole("combobox", { name: "Customer", exact: true })
+    .selectOption(customerId);
+  await form
+    .getByRole("combobox", { name: "Cleaner", exact: true })
+    .selectOption(cleaner.id);
+  await form.getByLabel("First date", { exact: true }).fill("2034-01-02");
+  await form
+    .getByLabel("Local start time", { exact: true })
+    .fill(project === "desktop" ? "09:00" : "10:00");
+  await form
+    .getByRole("combobox", { name: "Duration", exact: true })
+    .selectOption("60");
+  await form
+    .getByRole("combobox", { name: "Repeat", exact: true })
+    .selectOption("1");
+  const term = form.getByLabel("Booking period (1–52 weeks)", { exact: true });
+  await expect(term).toHaveAttribute("max", "52");
+  await term.fill("53");
+  expect(
+    await term.evaluate((el: HTMLInputElement) => el.validity.rangeOverflow),
+  ).toBe(true);
+  await term.fill("52");
+  await expect(
+    form.getByLabel("Booking period preview", { exact: true }),
+  ).toContainText("52 weekly visits over 52 weeks");
+  await expect(
+    form.getByLabel("Booking period preview", { exact: true }),
+  ).toContainText("Booking ends 31 Dec 2034");
+  const weeklyResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/operations/") &&
+      response.request().method() === "POST",
+  );
+  await form
+    .getByRole("button", { name: "Create booking", exact: true })
+    .click();
+  expect((await weeklyResponse).status()).toBe(200);
+  await expect(form.getByRole("status")).toContainText("Saved successfully");
+  await form
+    .getByRole("combobox", { name: "Repeat", exact: true })
+    .selectOption("2");
+  await form
+    .getByLabel("Local start time", { exact: true })
+    .fill(project === "desktop" ? "14:00" : "15:00");
+  await expect(
+    form.getByLabel("Booking period preview", { exact: true }),
+  ).toContainText("26 fortnightly visits over 52 weeks");
+  const fortnightlyResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/operations/") &&
+      response.request().method() === "POST",
+  );
+  await form
+    .getByRole("button", { name: "Create booking", exact: true })
+    .click();
+  expect((await fortnightlyResponse).status()).toBe(200);
+  await expect(form.getByRole("status")).toContainText("Saved successfully");
+  await page
+    .getByRole("link", { name: "Recurring bookings", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/admin\/recurring\/$/);
+  await page
+    .getByLabel("Search recurring bookings", { exact: true })
+    .fill(`Yearly ${project} Customer`);
+  const records = page.locator(".recurring-booking");
+  await expect(records).toHaveCount(2);
+  await expect(records.first()).toContainText("2 Jan 2034");
+  await expect(records.first()).toContainText("31 Dec 2034");
+  await expect(records.filter({ hasText: "Weekly · 52 weeks" })).toContainText(
+    "52 booked · 52 remaining",
+  );
+  await expect(
+    records.filter({ hasText: "Fortnightly · 52 weeks" }),
+  ).toContainText("26 booked · 26 remaining");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: `test-results/recurring-year-${project}.png`,
+    fullPage: true,
+  });
+  await page
+    .getByRole("combobox", { name: "Booking status", exact: true })
+    .selectOption("ended");
+  await expect(records).toHaveCount(0);
+  await expect(
+    page.getByText("No recurring bookings match your filters.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("admin sees renewal reminders and saves a customer follow-up", async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await login(page, "admin");
+  const project = test.info().project.name;
+  const { Temporal } = await import("@js-temporal/polyfill");
+  const today = Temporal.Now.plainDateISO("Europe/London");
+  const customerResponse = await page.request.post("/api/operations/", {
+    headers: { origin },
+    data: {
+      action: "customer",
+      data: {
+        name: `Renewal ${project} Customer`,
+        email: `renewal-${project}@example.test`,
+        phone: "+447700900502",
+        address: "2 Synthetic Renewal Lane",
+        postcode: "ME14 1AA",
+      },
+    },
+  });
+  expect(customerResponse.status()).toBe(200);
+  const customerId = (await customerResponse.json()).id;
+  const cleanerResponse = await page.request.post("/api/cleaners/invite/", {
+    headers: { origin },
+    data: {
+      name: `Renewal ${project} Cleaner`,
+      email: `renewal-cleaner-${project}@example.test`,
+      availability: Array.from({ length: 7 }, (_, weekday) => ({
+        weekday,
+        start_time: "08:00",
+        end_time: "20:00",
+      })),
+    },
+  });
+  expect(cleanerResponse.status()).toBe(200);
+  const cleanerId = (await cleanerResponse.json()).id;
+  const ids: string[] = [];
+  for (const date of [today.add({ days: 3 }), today.subtract({ weeks: 6 })]) {
+    const response = await page.request.post("/api/operations/", {
+      headers: { origin },
+      data: {
+        action: "booking",
+        data: {
+          customer_id: customerId,
+          cleaner_id: cleanerId,
+          date: date.toString(),
+          time: "09:00",
+          duration_minutes: 60,
+          interval_weeks: 1,
+          occurrences: 2,
+          duration_weeks: 2,
+        },
+      },
+    });
+    expect(response.status()).toBe(200);
+    ids.push((await response.json()).id);
+  }
+  const end = today.add({ days: 16 });
+  await page.goto("/admin/");
+  await expect(page.locator(".recurring-reminder")).toContainText(
+    "within a month",
+  );
+  await page.locator(".recurring-reminder").click();
+  await page
+    .getByRole("combobox", { name: "Booking status", exact: true })
+    .selectOption("ending-soon");
+  await page
+    .getByLabel("Search recurring bookings", { exact: true })
+    .fill(`Renewal ${project} Customer`);
+  const record = page.locator(`.recurring-booking[data-series-id="${ids[0]}"]`);
+  await expect(record).toBeVisible();
+  await expect(record).toContainText("Ending soon");
+  await expect(record).toContainText("Ends in 16 days");
+  await record
+    .getByRole("button", {
+      name: `Follow up for Renewal ${project} Customer`,
+      exact: true,
+    })
+    .click();
+  await expect(
+    record.getByRole("link", {
+      name: `renewal-${project}@example.test`,
+      exact: true,
+    }),
+  ).toHaveAttribute("href", `mailto:renewal-${project}@example.test`);
+  const followUpDate = record.getByLabel("Follow-up date", { exact: true });
+  await expect(followUpDate).toHaveValue(today.toString());
+  await record
+    .getByRole("button", { name: "Add renewal follow-up", exact: true })
+    .click();
+  await expect(record).toContainText("A follow-up task is already open.");
+  const data = await (await page.request.get("/api/operations/")).json();
+  const taskTitle = `Follow up: Renewal ${project} Customer recurring cleaning ends ${end}`;
+  expect(data.tasks).toContainEqual(
+    expect.objectContaining({
+      customer_id: customerId,
+      title: taskTitle,
+      due_on: today.toString(),
+      done: false,
+    }),
+  );
+  await page.reload();
+  await expect(
+    page.locator(`.recurring-booking[data-series-id="${ids[0]}"]`),
+  ).toContainText("Follow-up task due");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: `test-results/recurring-renewal-${project}.png`,
+    fullPage: true,
+  });
+  await page
+    .getByRole("combobox", { name: "Booking status", exact: true })
+    .selectOption("ended");
+  await expect(
+    page.locator(`.recurring-booking[data-series-id="${ids[1]}"]`),
+  ).toBeVisible();
+  await expect(
+    page.locator(`.recurring-booking[data-series-id="${ids[0]}"]`),
+  ).toHaveCount(0);
+  await page.goto("/admin/");
+  await expect(page.getByText(taskTitle, { exact: true })).toBeVisible();
+  await login(page, "cleaner");
+  await page.goto("/admin/recurring/");
+  await expect(page).toHaveURL(/\/cleaner\/$/);
+  expect(
+    await (await page.request.get("/api/operations/")).json(),
+  ).not.toHaveProperty("booking_series");
+  expect(errors).toEqual([]);
+});

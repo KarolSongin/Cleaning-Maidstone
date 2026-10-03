@@ -45,6 +45,18 @@ export type Visit = {
   status: string;
   series_id: string | null;
 };
+export type BookingSeries = {
+  id: string;
+  customer_id: string;
+  cleaner_id: string;
+  anchor_date: string;
+  ends_on: string;
+  duration_weeks: number;
+  local_time: string;
+  duration_minutes: number;
+  interval_weeks: 1 | 2;
+  active: boolean;
+};
 export type CleanerJob = {
   id: string;
   starts_at: string;
@@ -104,6 +116,7 @@ export type DashboardData = {
   customers: Customer[];
   cleaners: Cleaner[];
   visits: Visit[];
+  booking_series: BookingSeries[];
   enquiries: Enquiry[];
   tasks: Task[];
   conversations: Conversation[];

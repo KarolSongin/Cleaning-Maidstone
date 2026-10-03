@@ -19,22 +19,59 @@ import type {
 import type { Operation } from "./validation";
 type Table = keyof Database["public"]["Tables"];
 type Fn = keyof Database["public"]["Functions"];
+const dateColumns: Partial<Record<Table, string[]>> = {
+  booking_series: ["anchor_date", "ends_on"],
+  leave_requests: ["starts_on", "ends_on"],
+  follow_up_tasks: ["due_on"],
+};
 export async function rows<T>(
   table: Table,
   actor: Actor | "anon" | "service_role",
 ): Promise<T[]> {
-  if (demoEnabled())
-    return JSON.parse(
-      JSON.stringify(
-        await localQuery<T>(actor, `select * from public.${table}`),
-      ),
+  if (demoEnabled()) {
+    const records = await localQuery<Record<string, unknown>>(
+      actor,
+      `select * from public.${table}`,
     );
+    // PGlite returns SQL dates as Date objects; PostgREST returns YYYY-MM-DD.
+    // Keep date-only business fields consistent across the two backends.
+    for (const record of records)
+      for (const column of dateColumns[table] ?? []) {
+        const value = record[column];
+        if (value instanceof Date)
+          record[column] = value.toISOString().slice(0, 10);
+      }
+    return JSON.parse(JSON.stringify(records));
+  }
   const client =
     actor === "anon"
       ? publicClient()
       : actor === "service_role"
         ? serviceClient()
         : await sessionClient();
+  if (table === "visits" || table === "booking_series") {
+    // A year's visits can exceed PostgREST's per-request row limit. Fetch the
+    // complete RLS-visible set so counts and free calendar hours stay accurate.
+    const records: unknown[] = [];
+    let total: number | null = null;
+    for (;;) {
+      const { data, error, count } = await client
+        .from(table)
+        .select("*", records.length ? {} : { count: "exact" })
+        .order("id")
+        .range(records.length, records.length + 499);
+      if (error) throw new Error(error.message);
+      if (count !== null) total = count;
+      if (!data?.length) {
+        if (total !== null && records.length < total)
+          throw new Error("Could not load the complete booking schedule");
+        break;
+      }
+      records.push(...data);
+      if (total !== null ? records.length >= total : data.length < 500) break;
+    }
+    return records as T[];
+  }
   const { data, error } = await client.from(table).select("*");
   if (error) throw new Error(error.message);
   return data as unknown as T[];
@@ -77,6 +114,7 @@ export async function dashboard(actor: Actor): Promise<DashboardData> {
     "customers",
     "cleaners",
     "visits",
+    "booking_series",
     "enquiries",
     "follow_up_tasks",
     "conversations",

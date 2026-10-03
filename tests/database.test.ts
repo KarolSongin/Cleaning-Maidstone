@@ -6,6 +6,7 @@ import {
   DEMO_ADMIN,
   DEMO_CLEANER,
   DEMO_SECOND_CLEANER,
+  localBootstrap,
 } from "@/lib/local-db";
 import { occurrenceInstants } from "@/lib/scheduling";
 import fs from "node:fs/promises";
@@ -659,3 +660,229 @@ describe("admin-managed weekly availability", () => {
     ).rejects.toThrow(/availability/);
   });
 });
+
+describe("52-week recurring bookings", () => {
+  let count = 0;
+  async function seriesCleaner() {
+    const id = `bbbbbbbb-bbbb-4bbb-8bbb-${String(++count).padStart(12, "0")}`;
+    await db.query(
+      "insert into auth.users(id,raw_user_meta_data) values($1,'{}')",
+      [id],
+    );
+    await admin("select register_cleaner($1)", [
+      JSON.stringify({
+        id,
+        name: "Recurring Test Cleaner",
+        availability: Array.from({ length: 7 }, (_, weekday) => ({
+          weekday,
+          start_time: "08:00",
+          end_time: "20:00",
+        })),
+      }),
+    ]);
+    return id;
+  }
+  const base = (cleaner_id: string) => ({
+    customer_id: customer,
+    cleaner_id,
+    date: "2032-01-05",
+    time: "09:00",
+    duration_minutes: 180,
+    interval_weeks: 1,
+    occurrences: 52,
+    duration_weeks: 52,
+  });
+  it.each([
+    { interval_weeks: 1, occurrences: 52 },
+    { interval_weeks: 2, occurrences: 26 },
+  ])(
+    "creates a full-year period at frequency $interval_weeks",
+    async (recurrence) => {
+      const cleaner_id = await seriesCleaner();
+      const [{ id }] = await admin<{ id: string }>(
+        "select create_booking($1) as id",
+        [JSON.stringify({ ...base(cleaner_id), ...recurrence })],
+      );
+      const [series] = await admin<{ duration_weeks: number; ends_on: string }>(
+        "select duration_weeks,ends_on::text from booking_series where id=$1",
+        [id],
+      );
+      expect(series).toEqual({ duration_weeks: 52, ends_on: "2033-01-02" });
+      const visits = await admin<{ local_date: string; local_time: string }>(
+        "select (starts_at at time zone 'Europe/London')::date::text as local_date,to_char(starts_at at time zone 'Europe/London','HH24:MI') as local_time from visits where series_id=$1 order by starts_at",
+        [id],
+      );
+      expect(visits).toHaveLength(recurrence.occurrences);
+      expect(visits.every((v) => v.local_time === "09:00")).toBe(true);
+      expect(visits.at(-1)?.local_date).toBe(
+        recurrence.interval_weeks === 1 ? "2032-12-27" : "2032-12-20",
+      );
+      expect(
+        await cleaner("select * from booking_series where id=$1", [id]),
+      ).toEqual([]);
+      await expect(
+        publicQuery("select * from booking_series where id=$1", [id]),
+      ).rejects.toThrow(/permission denied/);
+    },
+  );
+  it("rejects oversized or mismatched periods without creating any series or visits", async () => {
+    const cleaner_id = await seriesCleaner();
+    for (const patch of [
+      { duration_weeks: 53, occurrences: 53 },
+      { interval_weeks: 2, occurrences: 27, duration_weeks: undefined },
+      { interval_weeks: 2, occurrences: 52 },
+      { duration_weeks: 51 },
+    ]) {
+      await expect(
+        admin("select create_booking($1)", [
+          JSON.stringify({ ...base(cleaner_id), ...patch }),
+        ]),
+      ).rejects.toThrow(/booking recurrence|booking period|52 weeks/);
+    }
+    expect(
+      await admin("select id from booking_series where cleaner_id=$1", [
+        cleaner_id,
+      ]),
+    ).toEqual([]);
+    expect(
+      await admin("select id from visits where cleaner_id=$1", [cleaner_id]),
+    ).toEqual([]);
+  });
+  it("rolls back a year of visits when the final occurrence conflicts", async () => {
+    const cleaner_id = await seriesCleaner();
+    await admin("select create_booking($1)", [
+      JSON.stringify({
+        ...base(cleaner_id),
+        date: "2032-12-27",
+        interval_weeks: 0,
+        occurrences: 1,
+        duration_weeks: undefined,
+      }),
+    ]);
+    await expect(
+      admin("select create_booking($1)", [JSON.stringify(base(cleaner_id))]),
+    ).rejects.toThrow(/no_cleaner_overlap/);
+    expect(
+      await admin("select id from booking_series where cleaner_id=$1", [
+        cleaner_id,
+      ]),
+    ).toEqual([]);
+    expect(
+      await admin("select id from visits where cleaner_id=$1", [cleaner_id]),
+    ).toHaveLength(1);
+  });
+  it("keeps the saved end date after exceptions and restart", async () => {
+    const cleaner_id = await seriesCleaner();
+    const [{ id }] = await admin<{ id: string }>(
+      "select create_booking($1) as id",
+      [
+        JSON.stringify({
+          ...base(cleaner_id),
+          occurrences: 3,
+          duration_weeks: 3,
+        }),
+      ],
+    );
+    const visits = await admin<{ id: string }>(
+      "select id from visits where series_id=$1 order by starts_at",
+      [id],
+    );
+    await admin("select change_visit($1)", [
+      JSON.stringify({ id: visits.at(-1)!.id, status: "cancelled" }),
+    ]);
+    await admin("select change_visit($1)", [
+      JSON.stringify({ id: visits[0].id, starts_at: "2032-01-06T09:00:00Z" }),
+    ]);
+    const saved = await admin(
+      "select anchor_date::text,ends_on::text,duration_weeks from booking_series where id=$1",
+      [id],
+    );
+    expect(saved).toEqual([
+      { anchor_date: "2032-01-05", ends_on: "2032-01-25", duration_weeks: 3 },
+    ]);
+    await initialiseDatabase(db, true);
+    expect(
+      await admin(
+        "select anchor_date::text,ends_on::text,duration_weeks from booking_series where id=$1",
+        [id],
+      ),
+    ).toEqual(saved);
+  });
+});
+
+it("upgrades legacy recurring terms without changing visits or losing cancelled occurrences", async () => {
+  const legacy = new PGlite({ extensions: { btree_gist } });
+  try {
+    await legacy.exec(localBootstrap);
+    await legacy.exec(
+      await fs.readFile(
+        "supabase/migrations/202610020001_foundation.sql",
+        "utf8",
+      ),
+    );
+    await legacy.exec(`insert into auth.users(id,raw_user_meta_data) values('${DEMO_ADMIN}','{}'),('${DEMO_CLEANER}','{}');
+      update profiles set role='admin' where id='${DEMO_ADMIN}';
+      insert into cleaners(id,name) values('${DEMO_CLEANER}','Legacy Test Cleaner');
+      insert into availability(cleaner_id,weekday,start_time,end_time) select '${DEMO_CLEANER}',d,'08:00','20:00' from generate_series(0,6) d;
+      insert into customers(id,name,address,postcode) values('${customer}','Legacy Test Customer','Synthetic example','ME14 1AA');`);
+    const id = await legacy.transaction(async (tx) => {
+      await tx.exec("set local role authenticated");
+      await tx.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        DEMO_ADMIN,
+      ]);
+      return (
+        await tx.query<{ id: string }>("select create_booking($1) as id", [
+          JSON.stringify({
+            customer_id: customer,
+            cleaner_id: DEMO_CLEANER,
+            date: "2032-01-05",
+            time: "09:00",
+            duration_minutes: 180,
+            interval_weeks: 2,
+            occurrences: 26,
+          }),
+        ])
+      ).rows[0].id;
+    });
+    await legacy.query(
+      "update visits set status='cancelled' where id=(select id from visits where series_id=$1 order by starts_at desc limit 1)",
+      [id],
+    );
+    const before = (
+      await legacy.query(
+        "select * from visits where series_id=$1 order by starts_at",
+        [id],
+      )
+    ).rows;
+    await initialiseDatabase(legacy, false);
+    expect(
+      (
+        await legacy.query(
+          "select duration_weeks,anchor_date::text,ends_on::text from booking_series where id=$1",
+          [id],
+        )
+      ).rows,
+    ).toEqual([
+      { duration_weeks: 52, anchor_date: "2032-01-05", ends_on: "2033-01-02" },
+    ]);
+    expect(
+      (
+        await legacy.query(
+          "select * from visits where series_id=$1 order by starts_at",
+          [id],
+        )
+      ).rows,
+    ).toEqual(before);
+    await initialiseDatabase(legacy, false);
+    expect(
+      (
+        await legacy.query(
+          "select duration_weeks,ends_on::text from booking_series where id=$1",
+          [id],
+        )
+      ).rows,
+    ).toEqual([{ duration_weeks: 52, ends_on: "2033-01-02" }]);
+  } finally {
+    await legacy.close();
+  }
+}, 30000);

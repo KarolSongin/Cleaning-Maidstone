@@ -98,6 +98,8 @@ export type Database = {
           interval_weeks: number;
           timezone: string;
           active: boolean;
+          duration_weeks: number;
+          ends_on: string;
         };
         Insert: {
           id?: string;
@@ -109,6 +111,8 @@ export type Database = {
           interval_weeks: number;
           timezone?: string;
           active?: boolean;
+          duration_weeks: number;
+          ends_on: string;
         };
         Update: {
           id?: string;
@@ -120,6 +124,8 @@ export type Database = {
           interval_weeks?: number;
           timezone?: string;
           active?: boolean;
+          duration_weeks?: number;
+          ends_on?: string;
         };
         Relationships: [];
       };

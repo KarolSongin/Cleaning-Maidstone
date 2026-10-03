@@ -684,3 +684,166 @@ td small {
     gap: 9px;
   }
 }
+
+.booking-period-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #eef5f1;
+  border: 1px solid #d2e4d8;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #285b3c;
+}
+.booking-period-preview small {
+  font-size: 11px;
+}
+.recurring-reminder {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: #fff7df;
+  color: #73551b;
+  border: 1px solid #eddbac;
+  padding: 18px 22px;
+  border-radius: 9px;
+  margin-bottom: 22px;
+  font-size: 13px;
+}
+.recurring-reminder span {
+  font-size: 12px;
+}
+.recurring-list-heading,
+.recurring-booking-heading,
+.recurring-followup-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+.recurring-list-heading h2 {
+  margin: 0;
+}
+.recurring-list-heading .button {
+  flex-shrink: 0;
+}
+.recurring-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(170px, 1fr);
+  margin: 22px 0 16px;
+  gap: 15px;
+}
+.recurring-filters label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.recurring-filters input {
+  max-width: none;
+}
+.recurring-booking {
+  border: 1px solid #dfe5e2;
+  border-radius: 9px;
+  padding: 20px;
+  margin-top: 15px;
+}
+.recurring-booking h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.recurring-booking-heading p {
+  margin: 7px 0 0;
+  color: var(--muted);
+}
+.recurring-booking-dates {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 24px 0 18px;
+}
+.recurring-booking-dates dt {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+.recurring-booking-dates dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.recurring-followup-row {
+  align-items: center;
+  border-top: 1px solid #edf0ed;
+  padding-top: 15px;
+}
+.recurring-followup-row p {
+  margin: 0;
+  font-size: 12px;
+}
+.recurring-followup-row .button {
+  flex-shrink: 0;
+}
+.recurring-task-note {
+  display: block;
+  margin-top: 6px;
+  color: #285b3c;
+}
+.recurring-ending-soon {
+  border-color: #e9d398;
+  background: #fffcf3;
+}
+.badge-ending-soon {
+  background: #f5e6b8;
+  color: #6a5018;
+}
+.badge-upcoming {
+  background: #e8eef5;
+  color: #315b70;
+}
+.badge-ended {
+  background: #edf0ed;
+  color: #58645c;
+}
+.recurring-followup {
+  border-top: 1px solid #dfe5e2;
+  margin-top: 20px;
+  padding-top: 12px;
+}
+.recurring-followup .ops-form {
+  max-width: 360px;
+  margin-top: 16px;
+}
+.recurring-contact-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 25px;
+  font-size: 12px;
+}
+.recurring-contact-links a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .recurring-list-heading {
+    flex-direction: column;
+  }
+  .recurring-filters {
+    grid-template-columns: 1fr;
+  }
+  .recurring-booking {
+    padding: 16px;
+  }
+  .recurring-booking-dates {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 12px;
+  }
+  .recurring-booking-heading {
+    gap: 10px;
+  }
+  .recurring-followup-row {
+    align-items: flex-start;
+  }
+}
