@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { DashboardData, Visit } from "@/lib/models";
-import { visitsNeedingCover } from "@/lib/leave-cover";
+import { availableCoverCleaners, visitsNeedingCover } from "@/lib/leave-cover";
 import { calendarDate } from "@/lib/recurring-bookings";
 import { londonDate } from "@/lib/scheduling";
 import { OperationForm } from "./operation-form";
@@ -159,10 +159,10 @@ function CoverVisit({
   refresh: () => Promise<void>;
 }) {
   const [assigning, setAssigning] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState("");
   const customer = data.customers.find((c) => c.id === visit.customer_id);
-  const alternatives = data.cleaners.filter(
-    (c) => c.active && c.id !== visit.cleaner_id,
-  );
+  const alternatives = assigning ? availableCoverCleaners(data, visit) : [];
   const time = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/London",
     hour: "2-digit",
@@ -203,9 +203,31 @@ function CoverVisit({
           size="sm"
           variant="outline"
           aria-expanded={assigning}
-          onClick={() => setAssigning(!assigning)}
+          disabled={checking}
+          onClick={async () => {
+            setAvailabilityError("");
+            if (assigning) {
+              setAssigning(false);
+              return;
+            }
+            setChecking(true);
+            try {
+              await refresh();
+              setAssigning(true);
+            } catch {
+              setAvailabilityError(
+                "Could not check cover availability. Try again.",
+              );
+            } finally {
+              setChecking(false);
+            }
+          }}
         >
-          {assigning ? "Close cover options" : "Assign cover"}
+          {checking
+            ? "Checking availability…"
+            : assigning
+              ? "Close cover options"
+              : "Assign cover"}
         </Button>
         <Link
           className="text-link"
@@ -214,6 +236,11 @@ function CoverVisit({
           Open visit
         </Link>
       </div>
+      {availabilityError && (
+        <p className="alert alert-error" role="alert">
+          {availabilityError}
+        </p>
+      )}
       {assigning &&
         (alternatives.length ? (
           <OperationForm
@@ -227,9 +254,14 @@ function CoverVisit({
           >
             <label>
               Cover cleaner
-              <select name="cleaner_id" defaultValue="" required>
+              <select
+                key={alternatives.map((c) => c.id).join(":")}
+                name="cleaner_id"
+                defaultValue=""
+                required
+              >
                 <option value="" disabled>
-                  Choose another cleaner
+                  Choose an available cleaner
                 </option>
                 {alternatives.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -239,15 +271,15 @@ function CoverVisit({
               </select>
             </label>
             <p className="form-small">
-              Working hours, approved leave and other bookings are checked when
-              you save. This changes only this visit; its time and agreed rates
-              stay the same.
+              Only cleaners free for the whole visit are shown. Availability is
+              checked again when you save. This changes only this visit; its
+              time and agreed rates stay the same.
             </p>
           </OperationForm>
         ) : (
           <p className="form-small">
-            There are no other active cleaners. Open the visit to arrange a new
-            time, or invite another cleaner.
+            No cleaners are available for the whole visit. Open the visit to
+            arrange another time, or update a cleaner’s working hours.
           </p>
         ))}
     </li>

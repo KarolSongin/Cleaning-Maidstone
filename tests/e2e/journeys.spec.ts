@@ -1891,6 +1891,20 @@ test("time-off requests list every affected clean and can be approved after cove
   });
   expect(invite.status()).toBe(200);
   const coverCleaner = (await invite.json()).id;
+  const partialInvite = await page.request.post("/api/cleaners/invite/", {
+    headers: { origin },
+    data: {
+      name: `Partial Cover Cleaner ${project}`,
+      email: `partial-cover-${project}@example.test`,
+      availability: Array.from({ length: 7 }, (_, weekday) => ({
+        weekday,
+        start_time: "10:00",
+        end_time: "20:00",
+      })),
+    },
+  });
+  expect(partialInvite.status()).toBe(200);
+  const partialCleaner = (await partialInvite.json()).id;
   const rates = {
     customer_rate_pence: 2300,
     admin_rate_pence: 600,
@@ -1918,7 +1932,6 @@ test("time-off requests list every affected clean and can be approved after cove
   const completed = await booking(`${year}-05-10`, "13:00");
   await booking(`${year}-05-06`, "13:00");
   await operation("visit", { id: cancelled.id, status: "cancelled" });
-  const busy = await booking(first, "09:00", { cleaner_id: coverCleaner });
   const before = await (await page.request.get("/api/operations/")).json();
   const seriesVisits = before.visits
     .filter((v: { series_id: string }) => v.series_id === series.id)
@@ -1997,12 +2010,35 @@ test("time-off requests list every affected clean and can be approved after cove
   });
 
   const firstRow = card.locator(".leave-cover-visit").first();
+  // Change the rota after the page loaded: opening cover must refresh it.
+  const busy = await booking(first, "10:00", {
+    cleaner_id: coverCleaner,
+    duration_minutes: 30,
+  });
   await firstRow
     .getByRole("button", { name: "Assign cover", exact: true })
     .click();
-  await firstRow
-    .getByRole("combobox", { name: "Cover cleaner", exact: true })
-    .selectOption(coverCleaner);
+  const choices = firstRow.getByRole("combobox", {
+    name: "Cover cleaner",
+    exact: true,
+  });
+  await expect(choices).toBeVisible();
+  const values = () =>
+    choices
+      .locator("option")
+      .evaluateAll((options) =>
+        options.map((o) => (o as HTMLOptionElement).value),
+      );
+  const eligible = (await values()).filter(Boolean);
+  expect(eligible).not.toContain(source);
+  expect(eligible).not.toContain(coverCleaner);
+  expect(eligible).not.toContain(partialCleaner);
+  expect(eligible).toContain("33333333-3333-4333-8333-333333333333");
+  await choices.selectOption(eligible[0]);
+  // A booking made after selection must still be rejected on save.
+  const temporaryBookings: string[] = [];
+  for (const cleaner_id of eligible)
+    temporaryBookings.push((await booking(first, "09:00", { cleaner_id })).id);
   await firstRow
     .getByRole("button", { name: "Save cover assignment", exact: true })
     .click();
@@ -2010,7 +2046,25 @@ test("time-off requests list every affected clean and can be approved after cove
     "This cleaner already has a visit at that time.",
   );
   await expect(card.locator(".leave-cover-visit")).toHaveCount(3);
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(firstRow).toContainText(
+    "No cleaners are available for the whole visit.",
+  );
+  await expect(choices).toHaveCount(0);
+  await expect(
+    firstRow.getByRole("button", {
+      name: "Save cover assignment",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    card.getByRole("button", { name: "Approve", exact: true }),
+  ).toBeDisabled();
   await operation("visit", { id: busy.id, status: "cancelled" });
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(choices).toBeVisible();
+  expect(await values()).toEqual(["", coverCleaner]);
+  await choices.selectOption(coverCleaner);
   await firstRow
     .getByRole("button", { name: "Save cover assignment", exact: true })
     .click();
@@ -2098,5 +2152,7 @@ test("time-off requests list every affected clean and can be approved after cove
   });
   expect(impossible.status()).toBe(400);
   expect((await impossible.json()).error).toMatch(/approved leave/);
+  for (const id of temporaryBookings)
+    await operation("visit", { id, status: "cancelled" });
   expect(errors).toEqual([]);
 });
