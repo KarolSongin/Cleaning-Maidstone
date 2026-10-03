@@ -4,6 +4,7 @@ import { OpsShell } from "@/components/ops-shell";
 import { dashboard } from "@/lib/repository";
 import { adminAttention } from "@/lib/admin-attention";
 import { AdminAttentionProvider } from "@/components/admin-navigation";
+import { AdminConfirmationProvider } from "@/components/admin-confirmation";
 export const metadata = {
   title: "Admin | Cleaning Maidstone",
   robots: { index: false, follow: false },
@@ -20,7 +21,9 @@ export default async function Layout({
   );
   return (
     <AdminAttentionProvider initialCounts={counts}>
-      <OpsShell actor={actor}>{children}</OpsShell>
+      <AdminConfirmationProvider>
+        <OpsShell actor={actor}>{children}</OpsShell>
+      </AdminConfirmationProvider>
     </AdminAttentionProvider>
   );
 }

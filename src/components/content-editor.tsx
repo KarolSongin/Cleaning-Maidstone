@@ -4,7 +4,9 @@ import StarterKit from "@tiptap/starter-kit";
 import { useState } from "react";
 import type { Content } from "@/lib/models";
 import { Button } from "./ui/button";
-import { Field, sendOperation } from "./operation-form";
+import { Field, useConfirmedOperation } from "./operation-form";
+import { useAdminConfirmation } from "./admin-confirmation";
+import { ActionCancelled } from "@/lib/admin-confirmation";
 export default function ContentEditor({
   content,
   onSaved,
@@ -12,6 +14,8 @@ export default function ContentEditor({
   content?: Content;
   onSaved: () => Promise<void>;
 }) {
+  const sendOperation = useConfirmedOperation();
+  const confirm = useAdminConfirmation();
   const editor = useEditor({
     extensions: [StarterKit],
     content: content?.body || { type: "doc", content: [{ type: "paragraph" }] },
@@ -27,6 +31,7 @@ export default function ContentEditor({
       className="ops-form"
       onSubmit={async (e) => {
         e.preventDefault();
+        if (busy) return;
         const form = new FormData(
           e.currentTarget,
           (e.nativeEvent as SubmitEvent).submitter,
@@ -34,28 +39,40 @@ export default function ContentEditor({
         const status = form.get("intent") || "draft";
         setBusy(true);
         setError("");
+        setSuccess("");
         try {
-          await sendOperation("content", {
-            ...(content ? { id: content.id } : {}),
-            kind: form.get("kind"),
-            slug: form.get("slug"),
-            title: form.get("title"),
-            excerpt: form.get("excerpt"),
-            seo_title: form.get("seo_title"),
-            seo_description: form.get("seo_description"),
-            author: form.get("author"),
-            category: form.get("category"),
-            image_path: image,
-            image_alt: form.get("image_alt"),
-            body: editor?.getJSON() || {},
-            sections,
-            status,
-            published_at: form.get("published_at")
-              ? new Date(
-                  String(form.get("published_at")) + "T12:00:00Z",
-                ).toISOString()
-              : "",
-          });
+          await sendOperation(
+            "content",
+            {
+              ...(content ? { id: content.id } : {}),
+              kind: form.get("kind"),
+              slug: form.get("slug"),
+              title: form.get("title"),
+              excerpt: form.get("excerpt"),
+              seo_title: form.get("seo_title"),
+              seo_description: form.get("seo_description"),
+              author: form.get("author"),
+              category: form.get("category"),
+              image_path: image,
+              image_alt: form.get("image_alt"),
+              body: editor?.getJSON() || {},
+              sections,
+              status,
+              published_at: form.get("published_at")
+                ? new Date(
+                    String(form.get("published_at")) + "T12:00:00Z",
+                  ).toISOString()
+                : "",
+            },
+            content?.status === "published" && status === "draft"
+              ? {
+                  title: "Unpublish this content?",
+                  description: `Remove “${form.get("title")}” from the public website and save these changes as a private draft.`,
+                  confirmLabel: "Unpublish",
+                  danger: true,
+                }
+              : undefined,
+          );
           setSuccess(
             status === "published"
               ? "Published. The public page and sitemap have been refreshed."
@@ -63,7 +80,8 @@ export default function ContentEditor({
           );
           await onSaved();
         } catch (err) {
-          setError(err instanceof Error ? err.message : "Save failed.");
+          if (!(err instanceof ActionCancelled))
+            setError(err instanceof Error ? err.message : "Save failed.");
         } finally {
           setBusy(false);
         }
@@ -154,7 +172,17 @@ export default function ContentEditor({
           <button
             type="button"
             className="button button-ghost button-sm"
-            onClick={() => setSections(sections.filter((_, j) => j !== i))}
+            onClick={async () => {
+              if (
+                await confirm?.({
+                  title: "Remove this section?",
+                  description: `Remove “${sections[i].heading || "this section"}” from the content. The change takes effect when you save.`,
+                  confirmLabel: "Remove section",
+                  danger: true,
+                })
+              )
+                setSections((current) => current.filter((_, j) => j !== i));
+            }}
           >
             Remove section
           </button>
@@ -207,8 +235,19 @@ export default function ContentEditor({
           type="file"
           accept="image/png,image/jpeg,image/webp"
           onChange={async (e) => {
+            const input = e.currentTarget;
             const file = e.target.files?.[0];
             if (!file) return;
+            if (
+              !(await confirm?.({
+                title: "Upload this image?",
+                description: `Add “${file.name}” to the website media library and select it for this content. It will appear publicly after you publish the content.`,
+                confirmLabel: "Upload image",
+              }))
+            ) {
+              input.value = "";
+              return;
+            }
             setError("");
             const f = new FormData();
             f.set("file", file);
@@ -229,7 +268,18 @@ export default function ContentEditor({
           <button
             className="text-link"
             type="button"
-            onClick={() => setImage("")}
+            onClick={async () => {
+              if (
+                await confirm?.({
+                  title: "Remove this image?",
+                  description:
+                    "Remove the selected image from this content. The change takes effect when you save; the image stays in the media library.",
+                  confirmLabel: "Remove image",
+                  danger: true,
+                })
+              )
+                setImage("");
+            }}
           >
             Remove
           </button>

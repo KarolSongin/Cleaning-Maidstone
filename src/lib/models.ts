@@ -47,6 +47,7 @@ export type Visit = {
 };
 export type BookingSeries = {
   id: string;
+  deleted_at?: string | null;
   customer_id: string;
   cleaner_id: string;
   anchor_date: string;

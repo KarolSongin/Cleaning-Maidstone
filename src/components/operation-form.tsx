@@ -1,7 +1,13 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useState, useCallback, useRef, type ReactNode } from "react";
 import { Button } from "./ui/button";
 import type { PersonKind } from "./person-name";
+import { useAdminConfirmation } from "./admin-confirmation";
+import {
+  ActionCancelled,
+  adminConfirmation,
+  type ConfirmationRequest,
+} from "@/lib/admin-confirmation";
 export async function sendOperation(action: string, data: unknown) {
   const response = await fetch("/api/operations/", {
     method: "POST",
@@ -11,6 +17,27 @@ export async function sendOperation(action: string, data: unknown) {
   const result = await response.json();
   if (!response.ok) throw new Error(result.error);
   return result;
+}
+export function useConfirmedOperation() {
+  const confirm = useAdminConfirmation();
+  const pending = useRef(false);
+  return useCallback(
+    async (action: string, data: unknown, details?: ConfirmationRequest) => {
+      if (pending.current) throw new ActionCancelled();
+      pending.current = true;
+      try {
+        if (
+          confirm &&
+          !(await confirm(details ?? adminConfirmation(action, data)))
+        )
+          throw new ActionCancelled();
+        return await sendOperation(action, data);
+      } finally {
+        pending.current = false;
+      }
+    },
+    [confirm],
+  );
 }
 export function OperationForm({
   action,
@@ -30,23 +57,26 @@ export function OperationForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const save = useConfirmedOperation();
   return (
     <form
       className="ops-form"
       onSubmit={async (event) => {
         event.preventDefault();
+        if (busy) return;
         setBusy(true);
         setError("");
         setSuccess(false);
         try {
-          const result = await sendOperation(
+          const result = await save(
             action,
             map(new FormData(event.currentTarget)),
           );
           setSuccess(true);
           await onSaved(result);
         } catch (e) {
-          setError(e instanceof Error ? e.message : "The request failed.");
+          if (!(e instanceof ActionCancelled))
+            setError(e instanceof Error ? e.message : "The request failed.");
         } finally {
           setBusy(false);
         }

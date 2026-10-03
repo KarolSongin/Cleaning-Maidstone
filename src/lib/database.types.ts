@@ -190,6 +190,7 @@ export type Database = {
           active: boolean;
           duration_weeks: number;
           ends_on: string;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -203,6 +204,7 @@ export type Database = {
           active?: boolean;
           duration_weeks: number;
           ends_on: string;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -216,6 +218,7 @@ export type Database = {
           active?: boolean;
           duration_weeks?: number;
           ends_on?: string;
+          deleted_at?: string | null;
         };
         Relationships: [];
       };
@@ -781,6 +784,7 @@ export type Database = {
         }[];
       };
       create_booking: { Args: { p: Json }; Returns: string };
+      delete_booking_series: { Args: { sid: string }; Returns: string };
       enqueue_transcription: { Args: { rid: string }; Returns: undefined };
       ingest_call_event: { Args: { p: Json }; Returns: string };
       is_admin: { Args: Record<string, never>; Returns: boolean };

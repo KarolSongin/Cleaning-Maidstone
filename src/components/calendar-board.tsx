@@ -10,7 +10,8 @@ import { Temporal } from "@js-temporal/polyfill";
 import type { DashboardData, Visit } from "@/lib/models";
 import { freeAvailabilityBands, availabilityColour } from "@/lib/availability";
 import { londonDate } from "@/lib/scheduling";
-import { sendOperation } from "./operation-form";
+import { useConfirmedOperation } from "./operation-form";
+import { ActionCancelled, adminConfirmation } from "@/lib/admin-confirmation";
 import { PersonName } from "./person-name";
 
 type CalendarRange = { start: string; end: string; view: string };
@@ -30,6 +31,7 @@ export default function CalendarBoard({
   onError: (message: string) => void;
 }) {
   const [range, setRange] = useState<CalendarRange | null>(null);
+  const sendOperation = useConfirmedOperation();
   const bands = useMemo(
     () => (range ? freeAvailabilityBands(data, cleanerIds, range) : []),
     [data, cleanerIds, range],
@@ -204,16 +206,25 @@ export default function CalendarBoard({
         editable
         eventDrop={async (info) => {
           try {
-            await sendOperation("visit", {
-              id: info.event.id,
-              starts_at: info.event.start?.toISOString(),
-            });
+            await sendOperation(
+              "visit",
+              {
+                id: info.event.id,
+                starts_at: info.event.start?.toISOString(),
+              },
+              {
+                ...adminConfirmation("visit", {}),
+                customerName: info.event.extendedProps.customerName,
+                cleanerName: info.event.extendedProps.cleanerName,
+              },
+            );
             await onSaved();
           } catch (e) {
             info.revert();
-            onError(
-              e instanceof Error ? e.message : "Could not reschedule visit.",
-            );
+            if (!(e instanceof ActionCancelled))
+              onError(
+                e instanceof Error ? e.message : "Could not reschedule visit.",
+              );
           }
         }}
         eventResizableFromStart={false}

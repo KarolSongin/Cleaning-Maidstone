@@ -1,6 +1,7 @@
 "use client";
 import type { WeeklyAvailability } from "@/lib/models";
 import { weekdays } from "@/lib/availability";
+import { useAdminConfirmation } from "./admin-confirmation";
 
 export function WeeklyAvailabilityEditor({
   value,
@@ -9,6 +10,7 @@ export function WeeklyAvailabilityEditor({
   value: WeeklyAvailability[];
   onChange: (slots: WeeklyAvailability[]) => void;
 }) {
+  const confirm = useAdminConfirmation();
   const update = (index: number, patch: Partial<WeeklyAvailability>) =>
     onChange(
       value.map((slot, i) => (i === index ? { ...slot, ...patch } : slot)),
@@ -75,9 +77,20 @@ export function WeeklyAvailabilityEditor({
                   type="button"
                   className="weekly-remove"
                   aria-label={`Remove ${label} period ${i + 1}`}
-                  onClick={() =>
-                    onChange(value.filter((_, index) => index !== slot.index))
-                  }
+                  onClick={async () => {
+                    if (
+                      !confirm ||
+                      (await confirm({
+                        title: "Remove this working period?",
+                        description: `Remove ${label} ${slot.start_time}–${slot.end_time} from this schedule. Approved hours change only when you save.`,
+                        confirmLabel: "Remove period",
+                        danger: true,
+                      }))
+                    )
+                      onChange(
+                        value.filter((_, index) => index !== slot.index),
+                      );
+                  }}
                 >
                   Remove
                 </button>

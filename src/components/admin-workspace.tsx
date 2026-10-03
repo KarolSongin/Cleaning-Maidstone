@@ -13,7 +13,13 @@ import type {
 } from "@/lib/models";
 import { londonDate, londonInstant } from "@/lib/scheduling";
 import { Button } from "./ui/button";
-import { OperationForm, Field, sendOperation } from "./operation-form";
+import { OperationForm, Field, useConfirmedOperation } from "./operation-form";
+import { useAdminConfirmation } from "./admin-confirmation";
+import {
+  ActionCancelled,
+  adminConfirmation,
+  type ConfirmationRequest,
+} from "@/lib/admin-confirmation";
 import { useLiveWorkspace } from "./use-live-workspace";
 import {
   WeeklyAvailabilityEditor,
@@ -90,6 +96,8 @@ export function AdminWorkspace({
   initialDueOnly?: boolean;
 }) {
   const [data, setData] = useState(initialData);
+  const sendOperation = useConfirmedOperation();
+  const confirm = useAdminConfirmation();
   const [today, setToday] = useState(initialToday);
   const [asOf, setAsOf] = useState(initialNow);
   const publishAttention = useAdminAttention()?.publish;
@@ -142,13 +150,18 @@ export function AdminWorkspace({
       window.removeEventListener("focus", update);
     };
   }, [section, refresh]);
-  const run = async (action: string, value: unknown) => {
+  const run = async (
+    action: string,
+    value: unknown,
+    details?: ConfirmationRequest,
+  ) => {
     setError("");
     try {
-      await sendOperation(action, value);
+      await sendOperation(action, value, details);
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Action failed");
+      if (!(e instanceof ActionCancelled))
+        setError(e instanceof Error ? e.message : "Action failed");
     }
   };
   const customerName = (id: string | null) =>
@@ -665,10 +678,20 @@ export function AdminWorkspace({
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      run("visit", {
-                        id: selectedVisit.id,
-                        status: "cancelled",
-                      })
+                      run(
+                        "visit",
+                        {
+                          id: selectedVisit.id,
+                          status: "cancelled",
+                        },
+                        {
+                          ...adminConfirmation("visit", {
+                            status: "cancelled",
+                          }),
+                          customerName: customerName(selectedVisit.customer_id),
+                          cleanerName: cleanerName(selectedVisit.cleaner_id),
+                        },
+                      )
                     }
                   >
                     Cancel this occurrence
@@ -904,6 +927,15 @@ export function AdminWorkspace({
                 size="sm"
                 variant="outline"
                 onClick={async () => {
+                  if (
+                    !(await confirm?.({
+                      title: "Load a sample call?",
+                      description:
+                        "Create synthetic call events in the local conversations inbox. This does not place a real call.",
+                      confirmLabel: "Load sample",
+                    }))
+                  )
+                    return;
                   const r = await fetch("/api/demo/calls/", { method: "POST" });
                   if (r.ok) await refresh();
                   else setError("Could not load sample event.");
@@ -1025,6 +1057,17 @@ export function AdminWorkspace({
                               size="sm"
                               variant="outline"
                               onClick={async () => {
+                                if (
+                                  !(await confirm?.({
+                                    title:
+                                      "Delete this recording and transcript?",
+                                    description:
+                                      "Permanently delete the call recording and associated transcript, including connected provider copies. This cannot be undone.",
+                                    confirmLabel: "Delete recording",
+                                    danger: true,
+                                  }))
+                                )
+                                  return;
                                 const response = await fetch(
                                   "/api/recordings/" + r.id + "/",
                                   { method: "DELETE" },
@@ -1100,6 +1143,7 @@ function InviteForm({
   demo: boolean;
   refresh: () => Promise<void>;
 }) {
+  const confirm = useAdminConfirmation();
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [availability, setAvailability] = useState<WeeklyAvailability[]>([]);
@@ -1121,6 +1165,19 @@ function InviteForm({
           });
           if (!parsed.success) throw new Error(parsed.error.issues[0].message);
           setBusy(true);
+          if (
+            !(await confirm?.({
+              title: demo
+                ? "Create this cleaner profile?"
+                : "Invite this cleaner?",
+              description: demo
+                ? "Create a synthetic cleaner with the working days and hours you entered."
+                : `Send an account invitation to ${parsed.data.email} and set the cleaner’s recurring working hours.`,
+              confirmLabel: demo ? "Create profile" : "Send invitation",
+              cleanerName: parsed.data.name,
+            }))
+          )
+            return;
           const response = await fetch("/api/cleaners/invite/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

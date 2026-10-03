@@ -144,9 +144,13 @@ export async function dashboard(actor: Actor): Promise<DashboardData> {
     "conversation_notes",
   ];
   const data = await Promise.all(tables.map((t) => rows(t, actor)));
-  return Object.fromEntries(
+  const result = Object.fromEntries(
     tables.map((t, i) => [t === "follow_up_tasks" ? "tasks" : t, data[i]]),
   ) as unknown as DashboardData;
+  result.booking_series = result.booking_series.filter(
+    (series) => !series.deleted_at,
+  );
+  return result;
 }
 export async function cleanerData(actor: Actor) {
   return {
@@ -175,6 +179,8 @@ export async function mutate(operation: Operation, actor: Actor) {
       return rpc("save_customer", { p: data }, actor);
     case "booking":
       return rpc("create_booking", { p: data }, actor);
+    case "delete_series":
+      return rpc("delete_booking_series", { sid: data.id }, actor);
     case "visit_finances":
       return rpc("save_visit_finances", { p: data }, actor);
     case "visit":

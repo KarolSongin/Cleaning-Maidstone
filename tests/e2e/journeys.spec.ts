@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "./fixtures";
+import type { Page } from "@playwright/test";
 const origin = "http://127.0.0.1:3001";
 async function login(page: Page, role: "admin" | "cleaner") {
   await page.goto("/login/");

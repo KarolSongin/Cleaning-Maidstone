@@ -6,7 +6,8 @@ import type { DashboardData } from "@/lib/models";
 import { recurringSummaries, calendarDate } from "@/lib/recurring-bookings";
 import { FinanceSummary } from "./booking-rates";
 import { Button } from "./ui/button";
-import { OperationForm, Field } from "./operation-form";
+import { OperationForm, Field, useConfirmedOperation } from "./operation-form";
+import { ActionCancelled, adminConfirmation } from "@/lib/admin-confirmation";
 
 const labels = {
   "ending-soon": "Ending soon",
@@ -25,6 +26,9 @@ export function RecurringBookings({
   onSaved: () => Promise<void>;
 }) {
   const [filter, setFilter] = useState("all");
+  const sendOperation = useConfirmedOperation();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [followUpId, setFollowUpId] = useState<string | null>(null);
   const summaries = recurringSummaries(data, today);
@@ -107,6 +111,11 @@ export function RecurringBookings({
             </select>
           </label>
         </div>
+        {error && (
+          <p className="alert alert-error" role="alert">
+            {error}
+          </p>
+        )}
         <p className="form-small" role="status">
           {displayed.length} recurring{" "}
           {displayed.length === 1 ? "booking" : "bookings"}
@@ -202,19 +211,71 @@ export function RecurringBookings({
                       </span>
                     )}
                   </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setFollowUpId(followUpId === series.id ? null : series.id)
-                    }
-                  >
-                    {followUpId === series.id ? "Close follow-up" : "Follow up"}
-                    <span className="sr-only">
-                      {" "}
-                      for {customer?.name || "Customer"}
-                    </span>
-                  </Button>
+                  <div className="inline-actions">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setFollowUpId(
+                          followUpId === series.id ? null : series.id,
+                        )
+                      }
+                    >
+                      {followUpId === series.id
+                        ? "Close follow-up"
+                        : "Follow up"}
+                      <span className="sr-only">
+                        {" "}
+                        for {customer?.name || "Customer"}
+                      </span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="delete-series"
+                      disabled={deletingId !== null}
+                      onClick={async () => {
+                        setError("");
+                        setDeletingId(series.id);
+                        const related = data.visits.filter(
+                          (visit) => visit.series_id === series.id,
+                        );
+                        const removable = related.filter(
+                          (visit) =>
+                            Date.parse(visit.starts_at) > Date.now() &&
+                            ["scheduled", "cancelled"].includes(visit.status),
+                        ).length;
+                        try {
+                          await sendOperation(
+                            "delete_series",
+                            { id: series.id },
+                            {
+                              ...adminConfirmation("delete_series", {}),
+                              customerName: customer?.name || "Customer",
+                              cleanerName: cleaner?.name || "Cleaner",
+                              description: `Booking period: ${calendarDate(series.anchor_date)} to ${calendarDate(series.ends_on)}, ${series.interval_weeks === 1 ? "weekly" : "fortnightly"} at ${series.local_time.slice(0, 5)}. Remove this series from recurring bookings and permanently delete ${removable} upcoming unstarted ${removable === 1 ? "visit" : "visits"}. Keep ${related.length - removable} past, completed or in-progress ${related.length - removable === 1 ? "visit" : "visits"} and their financial history. Other series and one-off visits stay unchanged. This cannot be undone.`,
+                            },
+                          );
+                          await onSaved();
+                        } catch (error) {
+                          if (!(error instanceof ActionCancelled))
+                            setError(
+                              error instanceof Error
+                                ? error.message
+                                : "Could not delete the series.",
+                            );
+                        } finally {
+                          setDeletingId(null);
+                        }
+                      }}
+                    >
+                      {deletingId === series.id ? "Deleting…" : "Delete series"}
+                      <span className="sr-only">
+                        {" "}
+                        for {customer?.name || "Customer"}
+                      </span>
+                    </Button>
+                  </div>
                 </div>
                 {followUpId === series.id && (
                   <div
